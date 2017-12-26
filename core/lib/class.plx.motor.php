@@ -298,12 +298,13 @@ class plxMotor {
 				$url = $this->urlRewrite('?article'.intval($this->plxRecord_arts->f('numero')).'/'.$this->plxRecord_arts->f('url'));
 				eval($this->plxPlugins->callHook('plxMotorDemarrageNewCommentaire'));
 				if($retour[0] == 'c') { # Le commentaire a été publié
-					$_SESSION['msgcom'] = L_COM_PUBLISHED;				
+					$_SESSION['msgcom'] = L_COM_PUBLISHED;
 					header('Location: '.$url.'#'.$retour);
-				} elseif($retour == 'mod') { # Le commentaire est en modération
+				} elseif($retour === 'mod') { # Le commentaire est en modération
 					$_SESSION['msgcom'] = L_COM_IN_MODERATION;
 					header('Location: '.$url.'#form');
 				} else {
+					# Le commentaire est invalide
 					$_SESSION['msgcom'] = $retour;
 					$_SESSION['msg']['name'] = plxUtils::unSlash($_POST['name']);
 					$_SESSION['msg']['site'] = plxUtils::unSlash($_POST['site']);
@@ -757,6 +758,7 @@ class plxMotor {
 		else
 			$com['type'] = 'normal';
 		$com['ip'] = plxUtils::getValue($values[$iTags['ip'][0]]['value']);
+		$com['user_agent'] = (!empty($iTags['user_agent'])) ? plxUtils::getValue($values[$iTags['user_agent'][0]]['value']) : '';
 		$com['mail'] = plxUtils::getValue($values[$iTags['mail'][0]]['value']);
 		$com['site'] = plxUtils::getValue($values[$iTags['site'][0]]['value']);
 		$com['content'] = trim($values[ $iTags['content'][0] ]['value']);
@@ -864,9 +866,18 @@ class plxMotor {
 	public function newCommentaire($artId,$content) {
 
 		# Hook plugins
-		if(eval($this->plxPlugins->callHook('plxMotorNewCommentaire'))) return;
+		if(eval($this->plxPlugins->callHook('plxMotorNewCommentaire'))) return '';
 
-		if(strtolower($_SERVER['REQUEST_METHOD'])!= 'post' OR $this->aConf['capcha'] AND (!isset($_SESSION["capcha_token"]) OR !isset($_POST['capcha_token']) OR ($_SESSION["capcha_token"]!=$_POST['capcha_token']))) {
+		if(
+			strtolower($_SERVER['REQUEST_METHOD'])!= 'post' or
+			empty(plxUtils::checkLanguage($this->aConf['default_lang'])) or
+			empty(plxUtils::checkContent()) or
+			($this->aConf['capcha'] AND (
+				!isset($_SESSION["capcha_token"]) OR
+				!isset($_POST['capcha_token']) OR
+				$_SESSION["capcha_token"] != $_POST['capcha_token']
+			))
+		) {
 			return L_NEWCOMMENT_ERR_ANTISPAM;
 		}
 
@@ -881,8 +892,10 @@ class plxMotor {
 				$comment['mail'] = (plxUtils::checkMail(trim($content['mail'])))?trim($content['mail']):'';
 				# On vérifie le site
 				$comment['site'] = (plxUtils::checkSite($content['site'])?$content['site']:'');
-				# On récupère l'adresse IP du posteur
+				# On récupère l'adresse IP du contributeur
 				$comment['ip'] = plxUtils::getIp();
+				# On récupère le User-Agent du contributeur
+				$comment['user_agent'] = (!empty($_SERVER['HTTP_USER_AGENT'])) ? plxUtils::strCheck($_SERVER['HTTP_USER_AGENT']) : '';
 				# index du commentaire
 				$idx = $this->nextIdArtComment($artId);
 				# Commentaire parent en cas de réponse
@@ -925,19 +938,33 @@ class plxMotor {
 		# Hook plugins
 		if(eval($this->plxPlugins->callHook('plxMotorAddCommentaire'))) return;
 		# On genere le contenu de notre fichier XML
-		$xml = "<?xml version='1.0' encoding='".PLX_CHARSET."'?>\n";
-		$xml .= "<comment>\n";
-		$xml .= "\t<author><![CDATA[".plxUtils::cdataCheck($content['author'])."]]></author>\n";
-		$xml .= "\t<type>".$content['type']."</type>\n";
-		$xml .= "\t<ip>".$content['ip']."</ip>\n";
-		$xml .= "\t<mail><![CDATA[".plxUtils::cdataCheck($content['mail'])."]]></mail>\n";
-		$xml .= "\t<site><![CDATA[".plxUtils::cdataCheck($content['site'])."]]></site>\n";
-		$xml .= "\t<content><![CDATA[".plxUtils::cdataCheck($content['content'])."]]></content>\n";
-		$xml .= "\t<parent><![CDATA[".plxUtils::cdataCheck($content['parent'])."]]></parent>\n";
+		$encoding = PLX_CHARSET;
+		$type =
+		$xml = <<< XML_STARTS
+<?xml version='1.0' encoding="$encoding"?>
+<comment>
+	<type>{$content['type']}</type>
+	<ip>{$content['ip']}</ip>
+	<user_agent>{$content['user_agent']}</user_agent>\n
+XML_STARTS;
+		foreach(explode(' ', 'author mail site content parent') as $field) {
+			$value = plxUtils::cdataCheck($content[$field]);
+			if(!empty($value)) {
+				$value = "<![CDATA[$value]]>";
+			}
+			$xml .= <<< FIELD
+	<$field>$value</$field>\n
+FIELD;
+		}
+
 		# Hook plugins
 		eval($this->plxPlugins->callHook('plxMotorAddCommentaireXml'));
-		$xml .= "</comment>\n";
-		# On ecrit ce contenu dans notre fichier XML
+
+		$xml .= <<< XML_ENDS
+</comment>\n
+XML_ENDS;
+
+		# On écrit ce contenu dans notre fichier XML
 		return plxUtils::write($xml, PLX_ROOT.$this->aConf['racine_commentaires'].$content['filename']);
 	}
 
