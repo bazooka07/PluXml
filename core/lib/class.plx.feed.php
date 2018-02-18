@@ -1,5 +1,7 @@
 <?php
 
+# http://www.rssboard.org/rss-specification
+
 /**
  * Classe plxFeed responsable du traitement global des flux de syndication
  *
@@ -216,9 +218,6 @@ class plxFeed extends plxMotor {
 	public function getRssArticles() {
 
 		# Initialisation
-		$last_updated = '197001010100';
-		$entry_link = '';
-		$entry = '';
 		if($this->mode == 'tag') {
 			$title = $this->aConf['title'].' - '.L_PAGETITLE_TAG.' '.$this->cible;
 			$link = $this->urlRewrite('?tag/'.$this->cible);
@@ -231,15 +230,27 @@ class plxFeed extends plxMotor {
 			$title = $this->aConf['title'];
 			$link = $this->urlRewrite();
 		}
+		$title = plxUtils::strCheck($title);
+		$lastBuildDate = plxDate::dateIso2rfc822((!empty($this->plxRecord_arts)) ? $this->plxRecord_arts->f('date_update') : date('YmdHis'));
+		$href = $this->urlRewrite('feed.php?'.$this->get);
+		$cname = 'constant';
+
+		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
+		echo <<< RSS_ARTICLES_STARTS
+<?xml version="1.0" encoding="{$cname('PLX_CHARSET')}" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title><![CDATA[$title]]></title>
+		<link>$link</link>
+		<language>{$this->aConf['default_lang']}</language>
+		<description><![CDATA[{$this->aConf['description']}]]></description>
+		<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="$href" />
+		<lastBuildDate>$lastBuildDate</lastBuildDate>
+		<generator>PluXml</generator>\n
+RSS_ARTICLES_STARTS;
 		# On va boucler sur les articles (s'il y en a)
 		if($this->plxRecord_arts) {
 			while($this->plxRecord_arts->loop()) {
-				$thumb = '';
-				$src = $this->plxRecord_arts->f('thumbnail');
-				if($src!='') {
-					$src = (strpos($src, 'http')===false ? $this->racine.$src : $src);
-					$thumb = plxUtils::strCheck('<img src="'.$src.'" alt="" title="" />');
-				}
 				# Traitement initial
 				if($this->aConf['feed_chapo']) {
 					$content = $this->plxRecord_arts->f('chapo');
@@ -248,42 +259,43 @@ class plxFeed extends plxMotor {
 					$content = $this->plxRecord_arts->f('chapo').$this->plxRecord_arts->f('content');
 				}
 				$content .= $this->aConf['feed_footer'];
-				$artId = $this->plxRecord_arts->f('numero') + 0;
+				$artId = intval($this->plxRecord_arts->f('numero'));
 				$author = $this->aUsers[$this->plxRecord_arts->f('author')]['name'];
-				# On vérifie la date de publication
-				if($this->plxRecord_arts->f('date') > $last_updated)
-					$last_updated = $this->plxRecord_arts->f('date');
+				$title = $this->plxRecord_arts->f('title');
+				$link = $this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url'));
+				$guid = md5($this->plxRecord_arts->f('numero').$this->plxRecord_arts->f('date_update'));
+				$description = plxUtils::rel2abs($this->racine,$content);
+				$pubDate = plxDate::dateIso2rfc822($this->plxRecord_arts->f('date'));
+				$enclosure = $this->plxRecord_arts->f('thumbnail');
+				if(!empty($enclosure)) {
+					# Pas de <enclosure />
+					$enclosure = $this->urlRewrite($enclosure);
+					$enclosure = <<< ENCLOSURE
 
+				<enclosure>$enclosure</enclosure>
+ENCLOSURE;
+				}
 				# On affiche le flux dans un buffer
-				$entry .= "\t<item>\n";
-				$entry .= "\t\t".'<title>'.plxUtils::strCheck($this->plxRecord_arts->f('title')).'</title> '."\n";
-				$entry .= "\t\t".'<link>'.$this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url')).'</link>'."\n";
-				$entry .= "\t\t".'<guid>'.$this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url')).'</guid>'."\n";
-				$entry .= "\t\t".'<description>'.$thumb.plxUtils::strCheck(plxUtils::rel2abs($this->racine,$content)).'</description>'."\n";
-				$entry .= "\t\t".'<pubDate>'.plxDate::dateIso2rfc822($this->plxRecord_arts->f('date')).'</pubDate>'."\n";
-				$entry .= "\t\t".'<dc:creator>'.plxUtils::strCheck($author).'</dc:creator>'."\n";
+				$item = <<< ENTRY
+			<item>
+				<title><![CDATA[$title]]></title>
+				<link>$link</link>
+				<guid>$guid</guid>$enclosure
+				<description><![CDATA[{$description}]]></description>
+				<pubDate>$pubDate</pubDate>
+				<dc:creator><![CDATA[$author]]></dc:creator>
+			</item>\n
+ENTRY;
 				# Hook plugins
 				eval($this->plxPlugins->callHook('plxFeedRssArticlesXml'));
-				$entry .= "\t</item>\n";
+				echo $item;
 			}
 		}
 
-		# On affiche le flux
-		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
-		echo '<?xml version="1.0" encoding="'.PLX_CHARSET.'" ?>'."\n";
-		echo '<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
-		echo '<channel>'."\n";
-		echo "\t".'<title>'.plxUtils::strCheck($title).'</title>'."\n";
-		echo "\t".'<link>'.$link.'</link>'."\n";
-		echo "\t".'<language>' . $this->aConf['default_lang'] . '</language>'."\n";
-		echo "\t".'<description>'.plxUtils::strCheck($this->aConf['description']).'</description>'."\n";
-		echo "\t".'<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="'.$this->urlRewrite('feed.php?'.$this->get).'" />'."\n";
-		$last_updated = plxDate::dateIso2rfc822($last_updated);
-		echo "\t".'<lastBuildDate>'.$last_updated.'</lastBuildDate>'."\n";
-		echo "\t".'<generator>PluXml</generator>'."\n";
-		echo $entry;
-		echo '</channel>'."\n";
-		echo '</rss>';
+		echo <<< RSS_ARTICLES_ENDS
+	</channel>
+</rss>\n
+RSS_ARTICLES_ENDS;
 	}
 
 	/**
