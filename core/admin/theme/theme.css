@@ -308,6 +308,9 @@ input[maxlength="3"] {
 #medias-table img[data-src] {
 	cursor: pointer;
 }
+#medias-table img[data-src] {
+	cursor: pointer;
+}
 
 #medias-table {
 	margin-top: 10px;
