@@ -1,5 +1,14 @@
 ## PLUXML x.x (sortie : xx/xx/xxxx) ##
 
+FIX Grosse révision des expressions régulières mal formées pour la recherche d'articles + prise en compte de la catégorie "pin"
+FIX Optimisation de plxMotor::nbArticles() Remplacement des multiples "if" par un "switch" + prise en compte de la catégorie "pin"
+FIX Optimisation pour la création du query pour la recherche d'articles
+[+] core/admin/index.php : prise en compte de la catégorie "pin" dans la liste déroulante des catégories
+[+] core/admin/article.php : ajout de la catégorie "pin" après la catégorie "home"
+[+] core/admin/parametres_affichage.php: ajout entrée supplémentaire "pin_articles_count" (nombre maxi d'articles épinglés à afficher sur la page d'accueil
+[+] Prise en compte de la catégorie "pin" pour le tri des articles dans plxGlob::query() avec paramètre supplémentaire $pinCount=0
+FIX Factorisation de plxShow::catList()
+
 [+] PluCSS 1.3
 [+] Nouveau thème par défaut
 [+] Prise en compte du fichier css des plugins sur la page auth.php

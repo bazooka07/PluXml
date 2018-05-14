@@ -1,0 +1,4 @@
+2018-05-14 - J.P. Pourrez
+Traquer toutes les occurences de home dans les dossiers core/admin/ et core/lib/:
+   grep -Hne '\bhome\b' core/admin/*.php
+   grep -Hne '\bhome\b' core/lib/*.php

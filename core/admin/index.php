@@ -23,7 +23,7 @@ if(isset($_POST['selection']) AND !empty($_POST['sel']) AND ($_POST['selection']
 }
 
 # Récuperation de l'id de l'utilisateur
-$userId = ($_SESSION['profil'] < PROFIL_WRITER ? '[0-9]{3}' : $_SESSION['user']);
+$userId = ($_SESSION['profil'] < PROFIL_WRITER ? '\d{3}' : $_SESSION['user']);
 
 # Récuperation des paramètres
 if(!empty($_GET['sel']) AND in_array($_GET['sel'], array('all','published', 'draft','mod'))) {
@@ -42,54 +42,52 @@ else
 	$_SESSION['sel_cat']=(isset($_SESSION['sel_cat']) AND !empty($_SESSION['sel_cat']))?$_SESSION['sel_cat']:'all';
 
 # Recherche du motif de sélection des articles en fonction des paramètres
-$catIdSel = '';
+if(
+	in_array($_SESSION['sel_cat'], explode(' ', 'home pin')) or
+	preg_match('@^\d{3}$@', $_SESSION['sel_cat'])
+) {
+	$selectedCat = $_SESSION['sel_cat'].'(?:,pin|,\d{3})*';
+} else {
+	$selectedCat = '(?:home|pin|\d{3})';
+}
+
 $mod='';
 switch ($_SESSION['sel_get']) {
 case 'published':
-	$catIdSel = '[home|0-9,]*FILTER[home|0-9,]*';
+	$catIdSel = "(?:home,|pin,|\d{3},)*$selectedCat";
 	$mod='';
 	break;
 case 'draft':
-	$catIdSel = '[home|0-9,]*draft,FILTER[home|0-9,]*';
+	$catIdSel = "draft,(?:home,|pin,|\d{3},)*$selectedCat";
 	$mod='_?';
 	break;
 case 'all':
-	$catIdSel = '[home|draft|0-9,]*FILTER[draft|home|0-9,]*';
+	$catIdSel = "(?:draft,|home,|pin,|\d{3},)*$selectedCat";
 	$mod='_?';
 	break;
 case 'mod':
-	$catIdSel = '[home|draft|0-9,]*FILTER[draft|home|0-9,]*';
+	$catIdSel = "(?:draft,|home,|pin,|\d{3},)*$selectedCat";
 	$mod='_';
 	break;
-}
-
-switch ($_SESSION['sel_cat']) {
-case 'all' :
-	$catIdSel = str_replace('FILTER', '', $catIdSel); break;
-case '000' :
-	$catIdSel = str_replace('FILTER', '000', $catIdSel); break;
-case 'home':
-	$catIdSel = str_replace('FILTER', 'home', $catIdSel); break;
-case preg_match('/^[0-9]{3}$/', $_SESSION['sel_cat'])==1:
-	$catIdSel = str_replace('FILTER', $_SESSION['sel_cat'], $catIdSel);
 }
 
 # Nombre d'article sélectionnés
 $nbArtPagination = $plxAdmin->nbArticles($catIdSel, $userId);
 
 # Récupération du texte à rechercher
-$artTitle = (!empty($_GET['artTitle']))?plxUtils::unSlash(trim(urldecode($_GET['artTitle']))):'';
+$artTitle = (!empty($_GET['artTitle'])) ? plxUtils::unSlash(trim(urldecode($_GET['artTitle']))):'';
 if(empty($artTitle)) {
-	 $artTitle = (!empty($_POST['artTitle']))?plxUtils::unSlash(trim(urldecode($_POST['artTitle']))):'';
+	 $artTitle = (!empty($_POST['artTitle'])) ? plxUtils::unSlash(trim(urldecode($_POST['artTitle']))):'';
 }
 $_GET['artTitle'] = $artTitle;
 
 # On génère notre motif de recherche
 if(is_numeric($_GET['artTitle'])) {
 	$artId = str_pad($_GET['artTitle'],4,'0',STR_PAD_LEFT);
-	$motif = '/^'.$mod.$artId.'.'.$catIdSel.'.'.$userId.'.[0-9]{12}.(.*).xml$/';
+	$motif = "@^{$mod}{$artId}\.{$catIdSel}\.{$userId}\.\d{12}\.(.*)\.xml$@";
 } else {
-	$motif = '/^'.$mod.'[0-9]{4}.'.$catIdSel.'.'.$userId.'.[0-9]{12}.(.*)'.plxUtils::title2filename($_GET['artTitle']).'(.*).xml$/';
+	$title = plxUtils::title2filename($_GET['artTitle']);
+	$motif = "@^{$mod}\d{4}\.{$catIdSel}\.{$userId}\.\d{12}\..*{$title}.*\.xml$@";
 }
 # Calcul du nombre de page si on fait une recherche
 if($_GET['artTitle']!='') {
@@ -104,16 +102,18 @@ $arts = $plxAdmin->getArticles('all'); # Recuperation des articles
 
 # Génération de notre tableau des catégories
 $aFilterCat['all'] = L_ARTICLES_ALL_CATEGORIES;
-$aFilterCat['home'] = L_CATEGORY_HOME;
+$aFilterCat['home'] = L_CATEGORY_HOME_PAGE;
+$aFilterCat['pin'] = L_CATEGORY_PIN;
 $aFilterCat['000'] = L_UNCLASSIFIED;
 if($plxAdmin->aCats) {
 	foreach($plxAdmin->aCats as $k=>$v) {
 		$aCat[$k] = plxUtils::strCheck($v['name']);
-		$aFilterCat[$k] = plxUtils::strCheck($v['name']);
+		$aFilterCat[$k] = plxUtils::strCheck($v['name'])." ({$v['articles']})";
 	}
 	$aAllCat[L_CATEGORIES_TABLE] = $aCat;
 }
 $aAllCat[L_SPECIFIC_CATEGORIES_TABLE]['home'] = L_CATEGORY_HOME_PAGE;
+$aAllCat[L_SPECIFIC_CATEGORIES_TABLE]['pin'] = L_CATEGORY_PIN;
 $aAllCat[L_SPECIFIC_CATEGORIES_TABLE]['draft'] = L_DRAFT;
 $aAllCat[L_SPECIFIC_CATEGORIES_TABLE][''] = L_ALL_ARTICLES_CATEGORIES_TABLE;
 
@@ -181,6 +181,7 @@ include(dirname(__FILE__).'/top.php');
 				# Catégories : liste des libellés de toutes les categories
 				$draft='';
 				$libCats='';
+				$trClassName = '';
 				$aCats = array();
 				$catIds = explode(',', $plxAdmin->plxRecord_arts->f('categorie'));
 				if(sizeof($catIds)>0) {
@@ -188,6 +189,10 @@ include(dirname(__FILE__).'/top.php');
 						$selected = ($catId==$_SESSION['sel_cat'] ? ' selected="selected"' : '');
 						if($catId=='draft') $draft = ' - <strong>'.L_CATEGORY_DRAFT.'</strong>';
 						elseif($catId=='home') $aCats['home'] = '<option value="home"'.$selected.'>'.L_CATEGORY_HOME.'</option>';
+						elseif($catId=='pin') {
+							$aCats['pin'] = '<option value="pin"'.$selected.'>'.L_CATEGORY_PIN.'</option>';
+							$trClassName = ' class="pin"';
+						}
 						elseif($catId=='000') $aCats['000'] = '<option value="000"'.$selected.'>'.L_UNCLASSIFIED.'</option>';
 						elseif(isset($plxAdmin->aCats[$catId])) $aCats[$catId] = '<option value="'.$catId.'"'.$selected.'>'.plxUtils::strCheck($plxAdmin->aCats[$catId]['name']).'</option>';
 					}
@@ -200,7 +205,7 @@ include(dirname(__FILE__).'/top.php');
 				$nbComsToValidate = $plxAdmin->getNbCommentaires('/^_'.$idArt.'.(.*).xml$/','all');
 				$nbComsValidated = $plxAdmin->getNbCommentaires('/^'.$idArt.'.(.*).xml$/','all');
 				# On affiche la ligne
-				echo '<tr>';
+				echo "<tr{$trClassName}>";
 				echo '<td><input type="checkbox" name="idArt[]" value="'.$idArt.'" /></td>';
 				echo '<td>'.$idArt.'</td>';
 				echo '<td>'.plxDate::formatDate($plxAdmin->plxRecord_arts->f('date')).'&nbsp;</td>';

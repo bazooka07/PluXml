@@ -41,7 +41,7 @@ if(!empty($_POST)) { # Création, mise à jour, suppression ou aperçu
 	# Si profil PROFIL_WRITER on vérifie que l'article n'est pas celui d'un autre utilisateur
 	if($_SESSION['profil']==PROFIL_WRITER AND isset($_POST['artId']) AND $_POST['artId']!='0000') {
 		# On valide l'article
-		if(($aFile = $plxAdmin->plxGlob_arts->query('/^'.$_POST['artId'].'.([home[draft|0-9,]*).'.$_SESSION['user'].'.(.+).xml$/')) == false) { # Article inexistant
+		if(($aFile = $plxAdmin->plxGlob_arts->query("@^{$_POST['artId']}\.(?:draft,|home,|pin,|\d{3},)*(?:home|pin|\d{3})\.{$_SESSION['user']}\.(.+)\.xml$@")) == false) { # Article inexistant
 			plxMsg::Error(L_ERR_UNKNOWN_ARTICLE);
 			header('Location: index.php');
 			exit;
@@ -104,7 +104,7 @@ if(!empty($_POST)) { # Création, mise à jour, suppression ou aperçu
 		# Vérification de l'unicité de l'url
 		$_POST['url'] = plxUtils::title2url(trim($_POST['url'])==''?$_POST['title']:$_POST['url']);
 		foreach($plxAdmin->plxGlob_arts->aFiles as $numart => $filename) {
-			if(preg_match("/^_?[0-9]{4}.([0-9,|home|draft]*).[0-9]{3}.[0-9]{12}.".$_POST["url"].".xml$/", $filename)) {
+			if(preg_match("@^_?\d{4}\.(?:draft,|home,|pin,|\d{3},)*(?:home|pin|\d{3})\.\d{3}\.\d{12}\.{$_POST["url"]}\.xml$@", $filename)) {
 				if($numart!=str_replace('_', '',$_POST['artId'])) {
 					$valid = plxMsg::Error(L_ERR_URL_ALREADY_EXISTS." : ".plxUtils::strCheck($_POST["url"])) AND $valid;
 				}
@@ -174,7 +174,7 @@ if(!empty($_POST)) { # Création, mise à jour, suppression ou aperçu
 	eval($plxAdmin->plxPlugins->callHook('AdminArticlePostData'));
 } elseif(!empty($_GET['a'])) { # On n'a rien validé, c'est pour l'édition d'un article
 	# On va rechercher notre article
-	if(($aFile = $plxAdmin->plxGlob_arts->query('/^'.$_GET['a'].'.(.+).xml$/')) == false) { # Article inexistant
+	if(($aFile = $plxAdmin->plxGlob_arts->query('/^'.$_GET['a'].'\.(.+)\.xml$/')) == false) { # Article inexistant
 		plxMsg::Error(L_ERR_UNKNOWN_ARTICLE);
 		header('Location: index.php');
 		exit;
@@ -472,6 +472,8 @@ function refreshImg(dta) {
 							echo '<label for="cat_unclassified"><input class="no-margin" disabled="disabled" type="checkbox" id="cat_unclassified" name="catId[]"'.$selected.' value="000" />&nbsp;'. L_UNCLASSIFIED .'</label>';
 							$selected = (is_array($catId) AND in_array('home', $catId)) ? ' checked="checked"' : '';
 							echo '<label for="cat_home"><input type="checkbox" class="no-margin" id="cat_home" name="catId[]"'.$selected.' value="home" />&nbsp;'. L_CATEGORY_HOME_PAGE .'</label>';
+							$selected = (is_array($catId) AND in_array('pin', $catId)) ? ' checked="checked"' : '';
+							echo '<label for="cat_pin"><input type="checkbox" class="no-margin" id="cat_pin" name="catId[]"'.$selected.' value="pin" />&nbsp;'. L_CATEGORY_PIN .'</label>';
 							foreach($plxAdmin->aCats as $cat_id => $cat_name) {
 								$selected = (is_array($catId) AND in_array($cat_id, $catId)) ? ' checked="checked"' : '';
 								if($plxAdmin->aCats[$cat_id]['active'])

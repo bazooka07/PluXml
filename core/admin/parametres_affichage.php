@@ -144,6 +144,14 @@ include(dirname(__FILE__).'/top.php');
 		</div>
 		<div class="grid">
 			<div class="col sml-12 med-5 label-centered">
+				<label for="id_pin_articles_count"><?php echo L_CONFIG_VIEW_PIN_ARTICLES_COUNT ?>&nbsp;:</label>
+			</div>
+			<div class="col sml-12 med-7">
+				<?php plxUtils::printInput('pin_articles_count', $plxAdmin->aConf['pin_articles_count'], 'text', '2-4',false,'fieldnum'); ?>
+			</div>
+		</div>
+		<div class="grid">
+			<div class="col sml-12 med-5 label-centered">
 				<label><?php echo L_CONFIG_VIEW_IMAGES ?>&nbsp;:</label>
 			</div>
 			<div class="col sml-12 med-7">
