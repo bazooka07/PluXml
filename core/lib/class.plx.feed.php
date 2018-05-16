@@ -74,17 +74,22 @@ class plxFeed extends plxMotor {
 		# Hook plugins
 		if(eval($this->plxPlugins->callHook('plxFeedPreChauffageBegin'))) return;
 
+		$format = '@^%s\.%s\.\d{3}\.\d{12}\.[\w-]*\.xml$@';
+		$multiCats = "(?:home|pin|{$this->activeCats})(?:,pin|,\d{3})*";
+		# Une catégorie en particulier
 		if($this->get AND preg_match('#^(?:atom/|rss/)?categorie([0-9]+)/?#',$this->get,$capture)) {
 			$this->mode = 'article'; # Mode du flux
 			# On récupère la catégorie cible
 			$this->cible = str_pad($capture[1],3,'0',STR_PAD_LEFT); # On complète sur 3 caractères
 			# On modifie le motif de recherche
-			$this->motif = '/^[0-9]{4}.((?:[0-9]|home|,)*(?:'.$this->cible.')(?:[0-9]|home|,)*).[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+			$this->motif = sprintf($format, '\d{4}', "(?:home,|pin,|\d{3},)*{$this->cible}(?:,\d{3})*");
 		}
+		# Tous les commentaires
 		elseif($this->get AND preg_match('#^(?:atom/|rss/)?commentaires/?$#',$this->get)) {
 			$this->mode = 'commentaire'; # Mode du flux
 		}
-		elseif($this->get AND preg_match('#^(?:atom/|rss/)?tag\/([a-z0-9-]+)/?$#',$this->get,$capture)) {
+		# Une étiquette (tag) en particulier
+		elseif($this->get AND preg_match('#^(?:atom/|rss/)?tag\/([\w-]+)/?$#',$this->get,$capture)) {
 			$this->mode = 'tag';
 			$this->cible = $capture[1];
 			$ids = array();
@@ -103,19 +108,21 @@ class plxFeed extends plxMotor {
 				}
 			}
 			if(sizeof($ids)>0) {
-				$this->motif = '/('.implode('|', $ids).').(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+				$this->motif = sprintf($format, '(?:'.implode('|', $ids).')', $multiCats);
 			} else
 				$this->motif = '';
 
 		}
-		elseif($this->get AND preg_match('#^(?:atom/|rss/)?commentaires/article([0-9]+)/?$#',$this->get,$capture)) {
+		# Tous les commentaires d'un article
+		elseif($this->get AND preg_match('#^(?:atom/|rss/)?commentaires/article(\d+)/?$#',$this->get,$capture)) {
 			$this->mode = 'commentaire'; # Mode du flux
 			# On récupère l'article cible
 			$this->cible = str_pad($capture[1],4,'0',STR_PAD_LEFT); # On complète sur 4 caractères
 			# On modifie le motif de recherche
-			$this->motif = '/^'.$this->cible.'.(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+			$this->motif = sprintf($format, $this->cible, $multiCats);
 		}
-		elseif($this->get AND preg_match('#^admin([a-zA-Z0-9]+)/commentaires/(hors|en)-ligne/?$#',$this->get,$capture)) {
+		# Tous les commentaires pour l'administrateur
+		elseif($this->get AND preg_match('#^admin([\w-]+)/commentaires/(hors|en)-ligne/?$#',$this->get,$capture)) {
 			$this->mode = 'admin'; # Mode du flux
 			$this->cible = '-';	# /!\: il ne faut pas initialiser à blanc sinon ça prend par défaut les commentaires en ligne (faille sécurité)
 			if ($capture[1] == $this->clef) {
@@ -124,10 +131,11 @@ class plxFeed extends plxMotor {
 				elseif($capture[2] == 'en')
 					$this->cible = '';
 			}
+		# Tous les articles
 		} else {
 			$this->mode = 'article'; # Mode du flux
 			# On modifie le motif de recherche
-			$this->motif = '/^[0-9]{4}.(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+			$this->motif = sprintf($format, '\d{4}', $multiCats);
 		}
 		# Hook plugins
 		eval($this->plxPlugins->callHook('plxFeedPreChauffageEnd'));

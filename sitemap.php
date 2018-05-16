@@ -78,7 +78,7 @@ foreach($plxMotor->aCats as $cat_num => $cat_info) {
 }
 eval($plxMotor->plxPlugins->callHook('SitemapCategories'));
 # Les articles
-if($aFiles = $plxMotor->plxGlob_arts->query('/^[0-9]{4}.(?:[0-9]|home|,)*(?:'.$plxMotor->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/','art','rsort', 0, false, 'before')) {
+if($aFiles = $plxMotor->plxGlob_arts->query("@^\d{4}\.(?:home,|pin,|\d{3},)*(?:home|pin|{$plxMotor->activeCats})(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@",'art','rsort', 0, false, 'before')) {
 	$plxRecord_arts = false;
 	$array=array();
 	foreach($aFiles as $k=>$v) { # On parcourt tous les fichiers
@@ -90,12 +90,16 @@ if($aFiles = $plxMotor->plxGlob_arts->query('/^[0-9]{4}.(?:[0-9]|home|,)*(?:'.$p
 		# On boucle sur nos articles
 		while($plxRecord_arts->loop()) {
 			$num = intval($plxRecord_arts->f('numero'));
+			$cats = explode(',', $plxRecord_arts->f('categorie'));
+			if(in_array('pin', $cats)) { $priority = '0.75'; }
+			elseif(in_array('home', $cats)) { $priority = '0.7'; }
+			else { $priority = '0.5'; }
 			echo "\n";
 			echo "\t<url>\n";
 			echo "\t\t<loc>".$plxMotor->urlRewrite("?article".$num."/".plxUtils::strCheck($plxRecord_arts->f('url')))."</loc>\n";
 			echo "\t\t<lastmod>".plxDate::formatDate($plxRecord_arts->f('date'),'#num_year(4)-#num_month-#num_day')."</lastmod>\n";
 			echo "\t\t<changefreq>monthly</changefreq>\n";
-			echo "\t\t<priority>0.5</priority>\n";
+			echo "\t\t<priority>{$priority}</priority>\n";
 			echo "\t</url>\n";
 		}
 	}

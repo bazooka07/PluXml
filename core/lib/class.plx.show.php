@@ -529,7 +529,7 @@ class plxShow {
 			# On effectue l'affichage
 			$cats = explode(',', $this->plxMotor->plxRecord_arts->f('categorie'));
 			$className = (in_array('pin', $cats)) ? ' class="pin"' : '';
-			echo '<a'.$className.'href="'.$this->plxMotor->urlRewrite('?article'.$id.'/'.$url).'" title="'.$title.'">'.$title.'</a>';
+			echo '<a'.$className.' href="'.$this->plxMotor->urlRewrite('?article'.$id.'/'.$url).'" title="'.$title.'">'.$title.'</a>';
 		} else { # Type normal
 			echo plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('title'));
 		}

@@ -142,7 +142,7 @@ class plxMotor {
 			$this->mode = 'article'; # Mode article
 			$this->template = 'article.php';
 			$this->cible = str_pad($capture[1],4,'0',STR_PAD_LEFT); # On complete sur 4 caracteres
-			$this->motif = "@^{$this->cible}\.(?:home,|pin,|\d{3},)*(?:{$this->activeCats})(?,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@"; # Motif de recherche
+			$this->motif = "@^{$this->cible}\.(?:home,|pin,|\d{3},)*(?:{$this->activeCats})(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@"; # Motif de recherche
 			if($this->getArticles()) {
 				# Redirection 301
 				if(!isset($capture[2]) OR $this->plxRecord_arts->f('url')!=$capture[2]) {
@@ -219,7 +219,7 @@ class plxMotor {
 				$artsIds = implode('|', $ids);
 				$this->mode = 'tags'; # Affichage en mode home
 				$this->template = 'tags.php';
-				$this->motif = "@(?:$artsIds)\.(?:home,|pin,|\d{3},)*(?:{$this->activeCats}(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@";
+				$this->motif = "@(?:$artsIds)\.(?:home,|pin,|\d{3},)*(?:{$this->activeCats})(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@";
 				$this->bypage = $this->aConf['bypage_tags']; # Nombre d'article par page
 			} else {
 				$this->error404(L_ARTICLE_NO_TAG);
