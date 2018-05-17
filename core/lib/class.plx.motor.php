@@ -108,10 +108,302 @@ class plxMotor {
 		eval($this->plxPlugins->callHook('plxMotorConstruct'));
 	}
 
+	/*
+	 * La grosse méthode prechauffage() sera répartie sur les 9 petites methodes suivantes _prechauffage_?????().
+	 * Elles reçoivent si besoin un tableau préformaté pour renseigner $this->query.
+	 * Elles renseignent aussi $this->mode et $this->tempalte éventuellement.
+	 * Si elles ont reconnu la requête, elles  retournent true pour arrêter le traitement dans la méthode prechauffage().
+	 * */
+
+	private function __prechauffage_homestatic() {
+		if(
+			empty($this->get) AND
+			!empty($this->aConf['homestatic']) AND
+			array_key_exists($this->aConf['homestatic'], $this->aStats) AND
+			!empty($this->aStats[$this->aConf['homestatic']]['active'])
+		) {
+			$this->mode = 'static'; # Mode static
+			$this->cible = $this->aConf['homestatic'];
+			$this->template = $this->aStats[ $this->cible ]['template'];
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut afficher une page de blog.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_blog($artQuery) {
+		# /^(blog|blog\/page[0-9]*|\/?page[0-9]*)$/
+		if(empty($this->get) or preg_match('@^(blog(?:/page\d+)?|/?page\d+)$@',$this->get)) {
+			$this->mode = 'home';
+			$this->template = $this->aConf['hometemplate'];
+			$this->bypage = $this->aConf['bypage']; # Nombre d'article par page
+			# On regarde si on a des articles en mode "home"
+			$oldCats = $artQuery['cats'];
+			$artQuery['cats'] = '(?:pin,|\d{3},)*home(?:,pin|,\d{3}|)*';
+			if($this->plxGlob_arts->query('@^'.implode('\.', $artQuery).'$@')) {
+				$this->motif = $home_pattern;
+			} else { # Sinon on recupère tous les articles
+				$artQuery['cats'] = $oldCats;
+				$this->motif = '@^'.implode('\.', $artQuery).'$@';
+			}
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut afficher un article.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_article($artQuery) {
+		# /^article([0-9]+)\/?([a-z0-9-]+)?/
+		if(preg_match('@^(articles?|[\w-]+)(\d*)/([^#]+).*$@', $this->get, $captures)) {
+			$foundArt = (rtrim($captures[1], 's') == 'article');
+			if(!empty($this->aConf['urlrewriting'])) {
+				$artQuery['url'] = $captures[3];
+				if($foundArt) {
+					if(!empty($captures[2])) {
+						# Not required but faster search
+						$artQuery['artId'] = str_pad(intval($captures[2]), 4, '0', STR_PAD_LEFT);  # On justifie sur 4 digits à gauche
+					}
+				} else {
+					# Looking a category with url matches with $captures[1]
+					$catId = false;
+					foreach($this->aCats as $id=>$params) {
+						if($params['url'] == $captures[1]) {
+							$catId = $id;
+							break;
+						}
+					}
+					if(!empty($catId)) {
+						$artQuery['cats'] = '(?:home,|pin,|\d{3},)*'.$catId.'(?:,\d{3})*';
+					} else {
+						return false;
+					}
+				}
+			} elseif($foundArt and !empty($captures[2])) {
+				$artQuery['artId'] = str_pad(intval($captures[2]), 4, '0', STR_PAD_LEFT);  # On justifie sur 4 digits à gauche
+			} else {
+				return false;
+			}
+
+			# Motif de recherche
+			$this->motif = '@^'.implode('\.', $artQuery).'$@';
+			if(!empty($this->motif) and $this->getArticles()) {
+				$this->cible = $this->plxRecord_arts->f('numero'); # justifié sur 4 digits
+				if(!empty($captures[3]) and $this->plxRecord_arts->f('url') != ltrim($captures[3], '/')) {
+					# Redirection 301
+					$this->redir301($this->urlRewrite('?article'.intval($this->cible).'/'.$this->plxRecord_arts->f('url')));
+				}
+				# Mode article
+				$this->mode = 'article';
+				$this->template = 'article.php';
+				return true;
+			} else {
+				$this->error404(L_UNKNOWN_ARTICLE);
+			}
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut afficher une catégorie d'articles.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_categorie($artQuery) {
+		# elseif($this->get AND preg_match('/^categorie([0-9]+)\/?([a-z0-9-]+)?/',$this->get,$capture)) {
+		if(preg_match('@^categories?(\d+\b|/[\w-]+)(?:/([\w-]+))?@',$this->get,$captures)) {
+			$catId = false;
+			if(!empty($this->aConf['urlrewriting'])) {
+				$url = substr($captures[1], 1); # $captures[1] starts with '/'
+				foreach($this->aCats as $id=>$params) {
+					if(!empty($params['active']) and $params['url'] == $url) {
+						$catId = $id; # justified on 3 digits
+						break;
+					}
+				}
+			} else {
+				$id = intval($captures[1]);
+				if(!empty($id)) {
+					$catId = str_pad($id, 3, '0', STR_PAD_LEFT); # On complète sur 3 caracteres
+					if($this->aCats[$catId]['active'] AND $this->aCats[$catId]['url'] != $captures[2]) {
+						$this->redir301($this->urlRewrite('?categorie'.$captures[1].'/'.$this->aCats[$catId]['url']));
+					}
+				}
+			}
+
+			if(!empty($catId)) {
+				$this->mode = 'categorie'; # Mode categorie
+				$this->cible = $catId;
+				$artQuery['cats'] = '(?:home,|pin,|\d{3},)*'.$catId.'(?:,\d{3})*';
+				$this->motif = '@^'.implode('\.', $artQuery).'$@';
+
+				$categorie = $this->aCats[$catId];
+				$this->template = $categorie['template'];
+				$this->tri = (!empty($categorie['tri'])) ? $categorie['tri'] : $this->tri ; # Recuperation du tri des articles
+				$bypage = intval($categorie['bypage']);
+				$this->bypage = (!empty($bypage)) ? $bypage : $this->bypage;
+				return true;
+			} else {
+				$this->error404(L_UNKNOWN_CATEGORY);
+			}
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut afficher une liste d'articles archivés.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_archives($artQuery) {
+		# '/^archives\/([0-9]{4})[\/]?([0-9]{2})?[\/]?([0-9]{2})?/'
+		if(preg_match('@^archives/(\d{4})(?:/(\d{2}))?(?:/(\d{2}))?@',$this->get,$capture)) {
+			$this->mode = 'archives';
+			$this->template = 'archives.php';
+			$this->bypage = $this->aConf['bypage_archives'];
+			$this->cible = $search = $capture[1]; # searching for a year on 4 digits
+			$padding = 8;
+			if(!empty($capture[2])) {
+				$search .= $capture[2]; # searching for a month on 2 digits
+				$padding = 6;
+				$this->cible = $search;
+				if(!empty($capture[3])) { # searching for a day on 2 digits
+					$search .= $capture[3];
+					$padding = 4;
+				}
+			}
+			$artQuery['date'] = $search.'\d{'.$padding.'}';
+			$this->motif = '@^'.implode('\.', $artQuery).'$@';
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut afficher une liste d'article pour un mot-clé (tag).
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_tags($artQuery) {
+		if(preg_match('@^tag/([\w-]+)@',$this->get,$capture)) {
+			$this->cible = $capture[1];
+			$ids = array();
+			$datetime = date('YmdHi');
+			foreach($this->aTags as $idart => $tag) {
+				if($tag['date']<=$datetime) {
+					$tags = array_map("trim", explode(',', $tag['tags']));
+					$tagUrls = array_map(array('plxUtils', 'title2url'), $tags);
+					if(in_array($this->cible, $tagUrls)) {
+						if(!isset($ids[$idart])) $ids[$idart] = $idart;
+						if(!isset($this->cibleName)) {
+							$key = array_search($this->cible, $tagUrls);
+							$this->cibleName=$tags[$key];
+						}
+					}
+				}
+			}
+			if(sizeof($ids)>0) {
+				$this->mode = 'tags'; # Affichage en mode home
+				$this->template = 'tags.php';
+				$artQuery['artId'] = '('.implode('|', $ids).')';
+				$this->motif = '@^'.implode('\.', $artQuery).'$@';
+				$this->bypage = $this->aConf['bypage_tags']; # Nombre d'article par page
+			} else {
+				$this->error404(L_ARTICLE_NO_TAG);
+			}
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Affiche l'aperçu d'un article pendant son édition.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_preview() {
+		if(preg_match('@^preview\b@',$this->get) AND isset($_SESSION['preview'])) {
+			$this->mode = 'preview';
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut afficher une page statique.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_static() {
+		# /^static([0-9]+)\/?([a-z0-9-]+)?/
+		if(preg_match('@^static(\d+\b|/[\w-]+)(?:/([\w-]+))?@',$this->get,$captures)) {
+			$staticId = false;
+			if(!empty($this->aConf['urlrewriting'])) {
+				$url = substr($captures[1], 1);
+				foreach($this->aStats as $id=>$params) {
+					if($params['url'] == $url) {
+						$staticId = $id; # justified on 3 digits
+						break;
+					}
+				}
+			} else {
+				$staticId = str_pad($captures[1],3,'0',STR_PAD_LEFT); # On complète sur 3 caractères
+				if(array_key_exists($this->cible, $this->aStats) or empty($this->aStats[$staticId]['active'])) {
+					$this->error404(L_UNKNOWN_STATIC);
+				} else {
+					if(!empty($this->aConf['homestatic']) AND $captures[1]){
+						if($this->aConf['homestatic'] == $this->cible){
+							$this->redir301($this->urlRewrite());
+						}
+					} elseif($this->aStats[$staticId]['url'] != $captures[2]) {
+						$id = intval($captures[1]);
+						$this->redir301($this->urlRewrite("?static{$id}/{$this->aStats[$staticId]['url']}"));
+					}
+				}
+			}
+			if(!empty($staticId)) {
+				$this->mode = 'static';
+				$this->cible = $staticId;
+				$this->template = $this->aStats[$staticId]['template'];
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * Détermine si on veut télécharger un fichier.
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	private function __prechauffage_telechargement() {
+		if(preg_match('@^(?:telechargement|download)/(.+)$@',$this->get,$capture)) {
+			if($this->sendTelechargement($capture[1])) {
+				$this->mode = 'telechargement'; # Mode telechargement
+				$this->cible = $capture[1];
+			} else {
+				$this->error404(L_DOCUMENT_NOT_FOUND);
+			}
+		} else {
+			return false;
+		}
+	}
+
 	/**
 	 * Méthode qui effectue une analyse de la situation et détermine
 	 * le mode à appliquer. Cette méthode alimente ensuite les variables
-	 * de classe adéquates
+	 * de classe adéquates.
+	 *
+	 * Cette grosse méthode sera divisée en plus petites méthodes ultérieurement.
 	 *
 	 * @return	null
 	 * @author	Anthony GUÉRIN, Florent MONTHEL, Stéphane F
@@ -298,7 +590,7 @@ class plxMotor {
 				$url = $this->urlRewrite('?article'.intval($this->plxRecord_arts->f('numero')).'/'.$this->plxRecord_arts->f('url'));
 				eval($this->plxPlugins->callHook('plxMotorDemarrageNewCommentaire'));
 				if($retour[0] == 'c') { # Le commentaire a été publié
-					$_SESSION['msgcom'] = L_COM_PUBLISHED;				
+					$_SESSION['msgcom'] = L_COM_PUBLISHED;
 					header('Location: '.$url.'#'.$retour);
 				} elseif($retour == 'mod') { # Le commentaire est en modération
 					$_SESSION['msgcom'] = L_COM_IN_MODERATION;
