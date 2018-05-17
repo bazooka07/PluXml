@@ -23,6 +23,7 @@ class plxRecord {
 
 		# On initialise les variables de classe
 		$this->result = &$array;
+		$this->i = -1; # initialisation de la boucle
 		$this->size = sizeof($this->result);
 	}
 
@@ -53,13 +54,10 @@ class plxRecord {
 	 **/
 	public function f($field) {
 
-		if($this->i === -1) # Compteur négatif
-			$this->i++;
-		# On controle que le champ demande existe bien
-		if(isset($this->result[ $this->i ][ $field ]))
-			return $this->result[ $this->i ][ $field ];
-		else # Sinon on sort par une valeur negative
-			return false;
+		if($this->i < 0) # Compteur négatif
+			$this->i = 0;
+ 		# On controle que le champ demande existe bien
+		return (array_key_exists($field, $this->result[ $this->i ])) ? $this->result[ $this->i ][ $field ] : false;
 	}
 
 }
