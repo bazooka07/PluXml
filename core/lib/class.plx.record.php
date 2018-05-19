@@ -62,5 +62,27 @@ class plxRecord {
 			return false;
 	}
 
+	/**
+	 * Méthode qui retourne la date du dernier article ou commentaire.
+	 * @param	champ contenant la date à scanner
+	 * @return	date au format string
+	 * @author	J.P. Pourrez
+	 * */
+	public function lastUpdate($field) {
+		if(empty($this->result) or !array_key_exists($field, $this->result[0]) {
+			return date('YmdHis');
+		}
+
+		$lastUpdate = '19700101000000';
+		$iMax=count($this->result);
+		for($i=0; $i<$iMax; $i++) {
+			$value = $this->result[$i][$field];
+			if($lastUpdate < $value) {
+				$lastUpdate = $value;
+			}
+		}
+		return $lastUpdate;
+	}
+
 }
 ?>
