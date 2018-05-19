@@ -69,7 +69,7 @@ class plxRecord {
 	 * @author	J.P. Pourrez
 	 * */
 	public function lastUpdate($field) {
-		if(empty($this->result) or !array_key_exists($field, $this->result[0]) {
+		if(empty($this->result) or !array_key_exists($field, $this->result[0])) {
 			return date('YmdHis');
 		}
 
@@ -77,7 +77,7 @@ class plxRecord {
 		$iMax=count($this->result);
 		for($i=0; $i<$iMax; $i++) {
 			$value = $this->result[$i][$field];
-			if($lastUpdate < $value) {
+			if(strcmp($lastUpdate, $value) < 0) {
 				$lastUpdate = $value;
 			}
 		}
