@@ -1,10 +1,12 @@
 <?php
 
+# http://www.rssboard.org/rss-specification
+
 /**
  * Classe plxFeed responsable du traitement global des flux de syndication
  *
  * @package PLX
- * @author	Florent MONTHEL, Stephane F, Amaury Graillat
+ * @author	Florent MONTHEL, Stephane F, Amaury Graillat, J.P. Pourrez
  **/
 class plxFeed extends plxMotor {
 
@@ -67,7 +69,7 @@ class plxFeed extends plxMotor {
 	 * de classe adéquates
 	 *
 	 * @return	null
-	 * @author	Florent MONTHEL, Stéphane F
+	 * @author	Florent MONTHEL, Stéphane F, J.P. Pourrez
 	 **/
 	public function fprechauffage() {
 
@@ -211,14 +213,11 @@ class plxFeed extends plxMotor {
 	 * Méthode qui affiche le flux rss des articles du site
 	 *
 	 * @return	flux sur stdout
-	 * @author	Florent MONTHEL, Stephane F, Amaury GRAILLAT
+	 * @author	Florent MONTHEL, Stephane F, Amaury GRAILLAT, J.P. Pourrez
 	 **/
 	public function getRssArticles() {
 
 		# Initialisation
-		$last_updated = '197001010100';
-		$entry_link = '';
-		$entry = '';
 		if($this->mode == 'tag') {
 			$title = $this->aConf['title'].' - '.L_PAGETITLE_TAG.' '.$this->cible;
 			$link = $this->urlRewrite('?tag/'.$this->cible);
@@ -231,81 +230,100 @@ class plxFeed extends plxMotor {
 			$title = $this->aConf['title'];
 			$link = $this->urlRewrite();
 		}
+		$title = htmlspecialchars($title, ENT_XML1);
+		$last_updated = $this->plxRecord_arts->lastUpdate('date_update');
+		$lastBuildDate = plxDate::dateIso2rfc822($last_updated);
+
+		$description = htmlspecialchars($this->aConf['description'], ENT_XML1);
+		$href = $this->urlRewrite('feed.php?'.$this->get);
+		$cname = 'constant';
+
+		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
+		echo <<< RSS_ARTICLES_STARTS
+<?xml version="1.0" encoding="{$cname('PLX_CHARSET')}" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>$title</title>
+		<link>$link</link>
+		<language>{$this->aConf['default_lang']}</language>
+		<description>{$description}</description>
+		<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="$href" />
+		<lastBuildDate>$lastBuildDate</lastBuildDate>
+		<generator>PluXml</generator>\n
+RSS_ARTICLES_STARTS;
 		# On va boucler sur les articles (s'il y en a)
 		if($this->plxRecord_arts) {
 			while($this->plxRecord_arts->loop()) {
-				$thumb = '';
-				$src = $this->plxRecord_arts->f('thumbnail');
-				if($src!='') {
-					$src = (strpos($src, 'http')===false ? $this->racine.$src : $src);
-					$thumb = plxUtils::strCheck('<img src="'.$src.'" alt="" title="" />');
-				}
 				# Traitement initial
 				if($this->aConf['feed_chapo']) {
 					$content = $this->plxRecord_arts->f('chapo');
-					if(trim($content)=='') $content = $this->plxRecord_arts->f('content');
+					if(trim($content) == '') $content = $this->plxRecord_arts->f('content');
 				} else {
 					$content = $this->plxRecord_arts->f('chapo').$this->plxRecord_arts->f('content');
 				}
 				$content .= $this->aConf['feed_footer'];
-				$artId = $this->plxRecord_arts->f('numero') + 0;
-				$author = $this->aUsers[$this->plxRecord_arts->f('author')]['name'];
-				# On vérifie la date de publication
-				if($this->plxRecord_arts->f('date') > $last_updated)
-					$last_updated = $this->plxRecord_arts->f('date');
+				$artId = intval($this->plxRecord_arts->f('numero'));
+				$author = htmlspecialchars($this->aUsers[$this->plxRecord_arts->f('author')]['name'], ENT_XML1);
+				$title = htmlspecialchars($this->plxRecord_arts->f('title'), ENT_XML1);
+				$link = $this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url'));
+				$guid = md5($this->plxRecord_arts->f('numero').$this->plxRecord_arts->f('date_update'));
+				$description = htmlspecialchars(plxUtils::rel2abs($this->racine,$content), ENT_XML1);
+				$pubDate = plxDate::dateIso2rfc822($this->plxRecord_arts->f('date'));
+				$thumbnail = $this->plxRecord_arts->f('thumbnail');
+				if(!empty($thumbnail)) {
+					$filename = PLX_ROOT.$thumbnail;
+					$url = $this->urlRewrite($thumbnail);
+					$length = filesize($filename);
+					$type = mime_content_type($filename);
+					$enclosure = <<< ENCLOSURE
 
+				<enclosure url="$url" length="$length" type="$type" />
+ENCLOSURE;
+				} else {
+					$enclosure = '';
+				}
 				# On affiche le flux dans un buffer
-				$entry .= "\t<item>\n";
-				$entry .= "\t\t".'<title>'.plxUtils::strCheck($this->plxRecord_arts->f('title')).'</title> '."\n";
-				$entry .= "\t\t".'<link>'.$this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url')).'</link>'."\n";
-				$entry .= "\t\t".'<guid>'.$this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url')).'</guid>'."\n";
-				$entry .= "\t\t".'<description>'.$thumb.plxUtils::strCheck(plxUtils::rel2abs($this->racine,$content)).'</description>'."\n";
-				$entry .= "\t\t".'<pubDate>'.plxDate::dateIso2rfc822($this->plxRecord_arts->f('date')).'</pubDate>'."\n";
-				$entry .= "\t\t".'<dc:creator>'.plxUtils::strCheck($author).'</dc:creator>'."\n";
+				$item = <<< ENTRY
+			<item>
+				<title>$title</title>
+				<link>$link</link>
+				<guid isPermaLink="false">$guid</guid>$enclosure
+				<description>{$description}</description>
+				<pubDate>$pubDate</pubDate>
+				<dc:creator>$author</dc:creator>
+			</item>\n
+ENTRY;
 				# Hook plugins
 				eval($this->plxPlugins->callHook('plxFeedRssArticlesXml'));
-				$entry .= "\t</item>\n";
+				echo $item;
 			}
 		}
 
-		# On affiche le flux
-		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
-		echo '<?xml version="1.0" encoding="'.PLX_CHARSET.'" ?>'."\n";
-		echo '<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
-		echo '<channel>'."\n";
-		echo "\t".'<title>'.plxUtils::strCheck($title).'</title>'."\n";
-		echo "\t".'<link>'.$link.'</link>'."\n";
-		echo "\t".'<language>' . $this->aConf['default_lang'] . '</language>'."\n";
-		echo "\t".'<description>'.plxUtils::strCheck($this->aConf['description']).'</description>'."\n";
-		echo "\t".'<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="'.$this->urlRewrite('feed.php?'.$this->get).'" />'."\n";
-		$last_updated = plxDate::dateIso2rfc822($last_updated);
-		echo "\t".'<lastBuildDate>'.$last_updated.'</lastBuildDate>'."\n";
-		echo "\t".'<generator>PluXml</generator>'."\n";
-		echo $entry;
-		echo '</channel>'."\n";
-		echo '</rss>';
+		echo <<< RSS_ARTICLES_ENDS
+	</channel>
+</rss>\n
+RSS_ARTICLES_ENDS;
 	}
 
-	/**
-	 * Méthode qui affiche le flux rss des commentaires du site
-	 *
-	 * @return	flux sur stdout
-	 * @author	Florent MONTHEL, Amaury GRAILLAT
-	 **/
-	public function getRssComments() {
+	private function __getRssComments($header, $admin=false) {
+		$last_updated = $this->plxRecord_coms->lastUpdate('date');
+		$lastBuildDate = plxDate::dateIso2rfc822($last_updated);
+		$description = htmlspecialchars($this->aConf['description'], ENT_XML1);
+		$cname = 'constant';
 
-		# Traitement initial
-		$last_updated = '197001010100';
-		$entry_link = '';
-		$entry = '';
-		if($this->cible) { # Commentaires d'un article
-			$artId = $this->plxRecord_arts->f('numero') + 0;
-			$title = $this->aConf['title'].' - '.$this->plxRecord_arts->f('title').' - '.L_FEED_COMMENTS;
-			$link = $this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url'));
-		} else { # Commentaires globaux
-			$title = $this->aConf['title'].' - '.L_FEED_COMMENTS;
-			$link = $this->urlRewrite();
-		}
+		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
+		echo <<< RSS_COMMENTS_STARTS
+<?xml version="1.0" encoding="{$cname('PLX_CHARSET')}" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>{$header['title']}</title>
+		<link>{$header['link']}</link>
+		<language>{$this->aConf['default_lang']}</language>
+		<description>{$description}</description>
+		<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="{$header['href']}" />
+		<lastBuildDate>$lastBuildDate</lastBuildDate>
+		<generator>PluXml</generator>\n
+RSS_COMMENTS_STARTS;
 
 		# On va boucler sur les commentaires (s'il y en a)
 		if($this->plxRecord_coms) {
@@ -313,119 +331,97 @@ class plxFeed extends plxMotor {
 				# Traitement initial
 				if(isset($this->activeArts[$this->plxRecord_coms->f('article')])) {
 					$artId = $this->plxRecord_coms->f('article') + 0;
-					if($this->cible) { # Commentaires d'un article
-						$title_com = $this->plxRecord_arts->f('title').' - ';
-						$title_com .= L_FEED_WRITTEN_BY.' '.$this->plxRecord_coms->f('author').' @ ';
-						$title_com .= plxDate::formatDate($this->plxRecord_coms->f('date'),'#day #num_day #month #num_year(4), #hour:#minute');
-						$comId = 'c'.$this->plxRecord_coms->f('article').'-'.$this->plxRecord_coms->f('index');
-						$link_com = $this->urlRewrite('?article'.$artId.'/'.$this->plxRecord_arts->f('url').'#'.$comId);
-					} else { # Commentaires globaux
-						$title_com = $this->plxRecord_coms->f('author').' @ ';
-						$title_com .= plxDate::formatDate($this->plxRecord_coms->f('date'),'#day #num_day #month #num_year(4), #hour:#minute');
-						$artInfo = $this->artInfoFromFilename($this->plxGlob_arts->aFiles[$this->plxRecord_coms->f('article')]);
-						$comId = 'c'.$this->plxRecord_coms->f('article').'-'.$this->plxRecord_coms->f('index');
-						$link_com = $this->urlRewrite('?article'.$artId.'/'.$artInfo['artUrl'].'#'.$comId);
-					}
-					# On vérifie la date de publication
-					if($this->plxRecord_coms->f('date') > $last_updated)
-						$last_updated = $this->plxRecord_coms->f('date');
+					$comId = 'c'.$this->plxRecord_coms->f('article').'-'.$this->plxRecord_coms->f('index');
 
-					# On affiche le flux dans un buffer
-					$entry .= "\t<item>\n";
-					$entry .= "\t\t".'<title>'.strip_tags(html_entity_decode($title_com, ENT_QUOTES, PLX_CHARSET)).'</title> '."\n";
-					$entry .= "\t\t".'<link>'.$link_com.'</link>'."\n";
-					$entry .= "\t\t".'<guid>'.$link_com.'</guid>'."\n";
-					$entry .= "\t\t".'<description>'.plxUtils::strCheck(strip_tags($this->plxRecord_coms->f('content'))).'</description>'."\n";
-					$entry .= "\t\t".'<pubDate>'.plxDate::dateIso2rfc822($this->plxRecord_coms->f('date')).'</pubDate>'."\n";
-					$entry .= "\t\t".'<dc:creator>'.plxUtils::strCheck($this->plxRecord_coms->f('author')).'</dc:creator>'."\n";
+					if($this->cible) { # Commentaires d'un article
+						$title = $this->plxRecord_arts->f('title').' - ';
+						$title .= L_FEED_WRITTEN_BY.' '.$this->plxRecord_coms->f('author').' @ ';
+						$title .= plxDate::formatDate($this->plxRecord_coms->f('date'),'#day #num_day #month #num_year(4), #hour:#minute');
+						$url = $this->plxRecord_arts->f('url');
+					} else { # Commentaires globaux
+						$title = $this->plxRecord_coms->f('author').' @ ';
+						$title .= plxDate::formatDate($this->plxRecord_coms->f('date'),'#day #num_day #month #num_year(4), #hour:#minute');
+						$artInfo = $this->artInfoFromFilename($this->plxGlob_arts->aFiles[$this->plxRecord_coms->f('article')]);
+						$url = $artInfo['artUrl'];
+					}
+					$title = htmlspecialchars($title, ENT_XML1);
+					$description = htmlspecialchars($this->plxRecord_coms->f('content'), ENT_XML1);
+					$pubDate = plxDate::dateIso2rfc822($this->plxRecord_coms->f('date'));
+					$creator = htmlspecialchars(plxUtils::strCheck($this->plxRecord_coms->f('author')), ENT_XML1);
+					$link = $this->urlRewrite("?article{$artId}/{$url}#{$comId}");
+					# On stocke l'entrée dans un buffer
+					$entry = <<< ENTRY_STARTS
+		<item>
+			<title>$title</title>
+			<link>$link</link>
+			<guid>$link</guid>
+			<description>{$description}</description>
+			<pubDate>$pubDate</pubDate>
+			<dc:creator>$creator</dc:creator>\n
+ENTRY_STARTS;
 					# Hook plugins
-					eval($this->plxPlugins->callHook('plxFeedRssCommentsXml'));
-					$entry .= "\t</item>\n";
+					eval($this->plxPlugins->callHook($header['hook']));
+					$entry .= <<< ENTRY_ENDS
+		</item>\n
+ENTRY_ENDS;
+					echo $entry;
 				}
 			}
 		}
 
-		# On affiche le flux
-		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
-		echo '<?xml version="1.0" encoding="'.PLX_CHARSET.'" ?>'."\n";
-		echo '<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
-		echo '<channel>'."\n";
-		echo "\t".'<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="' . $this->urlRewrite('feed.php?rss/commentaires/') . '" />'."\n";
+		echo <<< RSS_COMMENTS_ENDS
+	</channel>
+</rss>\n
+RSS_COMMENTS_ENDS;
+	}
 
-		$entry .= "\t".'<title>'.strip_tags(html_entity_decode($title, ENT_QUOTES, PLX_CHARSET)).'</title> '."\n";
-		echo "\t".'<link>'.$link.'</link>'."\n";
-		echo "\t".'<language>' . $this->aConf['default_lang'] . '</language>'."\n";
-		echo "\t".'<description>'.plxUtils::strCheck($this->aConf['description']).'</description>'."\n";
 
-		$last_updated = plxDate::dateIso2rfc822($last_updated);
-		echo "\t".'<lastBuildDate>'.$last_updated.'</lastBuildDate>'."\n";
-		echo "\t".'<generator>PluXml</generator>'."\n";
-		echo $entry;
-		echo '</channel>'."\n";
-		echo '</rss>';
+	/**
+	 * Méthode qui affiche le flux rss des commentaires du site
+	 *
+	 * @return	flux sur stdout
+	 * @author	Florent MONTHEL, Amaury GRAILLAT, J.P. Pourrez
+	 **/
+	public function getRssComments() {
+		# Commentaires globaux
+		$title = $this->aConf['title'];
+		$link = '';
+
+		# Commentaires pour un article
+		if($this->cible) {
+			$title .= ' - '.$this->plxRecord_arts->f('title');
+			$link = "?article{$artId}{$this->plxRecord_arts->f('numero')}0/{$this->plxRecord_arts->f('url')}";
+		}
+
+		self::__getRssComments(array(
+			'title'	=> htmlspecialchars($title.' - '.L_FEED_COMMENTS, ENT_XML1),
+			'link'	=> $this->urlRewrite($link),
+			'href'	=> $this->urlRewrite('feed.php?rss/commentaires/'),
+			'hook'	=> 'plxFeedRssCommentsXml'
+		));
 	}
 
 	/**
 	 * Méthode qui affiche le flux RSS des commentaires du site pour l'administration
 	 *
 	 * @return	flux sur stdout
-	 * @author	Florent MONTHEL, Amaury GRAILLAT
+	 * @author	Florent MONTHEL, Amaury GRAILLAT, J.P. Pourrez
 	 **/
 	public function getAdminComments() {
-		# Traitement initial
-		$last_updated = '197001010100';
-		$entry = '';
-		if($this->cible == '_') { # Commentaires hors ligne
-			$link = $this->racine.'core/admin/comments.php?sel=offline&amp;page=1';
-			$title = $this->aConf['title'].' - '.L_FEED_OFFLINE_COMMENTS;
-			$link_feed = $this->racine.'feed.php?admin'.$this->clef.'/commentaires/hors-ligne';
-		} else { # Commentaires en ligne
-			$link = $this->racine.'core/admin/comments.php?sel=online&amp;page=1';
-			$title = $this->aConf['title'].' - '.L_FEED_ONLINE_COMMENTS;
-			$link_feed = $this->racine.'feed.php?admin'.$this->clef.'/commentaires/en-ligne';
-		}
 
-		# On va boucler sur les commentaires (s'il y en a)
-		if($this->plxRecord_coms) {
-			while($this->plxRecord_coms->loop()) {
-				$artId = $this->plxRecord_coms->f('article') + 0;
-				$comId = $this->cible.$this->plxRecord_coms->f('article').'.'.$this->plxRecord_coms->f('numero');
-				$title_com = $this->plxRecord_coms->f('author').' @ ';
-				$title_com .= plxDate::formatDate($this->plxRecord_coms->f('date'),'#day #num_day #month #num_year(4), #hour:#minute');
-				$link_com = $this->racine.'core/admin/comment.php?c='.$comId;
-				# On vérifie la date de publication
-				if($this->plxRecord_coms->f('date') > $last_updated)
-					$last_updated = $this->plxRecord_coms->f('date');
-				# On affiche le flux dans un buffer
-				$entry .= "\t<item>\n";
-				$entry .= "\t\t".'<title>'.strip_tags(html_entity_decode($title_com, ENT_QUOTES, PLX_CHARSET)).'</title> '."\n";
-				$entry .= "\t\t".'<link>'.$link_com.'</link>'."\n";
-				$entry .= "\t\t".'<guid>'.$link_com.'</guid>'."\n";
-				$entry .= "\t\t".'<description>'.plxUtils::strCheck(strip_tags($this->plxRecord_coms->f('content'))).'</description>'."\n";
-				$entry .= "\t\t".'<pubDate>'.plxDate::dateIso2rfc822($this->plxRecord_coms->f('date')).'</pubDate>'."\n";
-				$entry .= "\t\t".'<dc:creator>'.plxUtils::strCheck($this->plxRecord_coms->f('author')).'</dc:creator>'."\n";
-				# Hook plugins
-				eval($this->plxPlugins->callHook('plxFeedAdminCommentsXml'));
-				$entry .= "\t</item>\n";
-			}
-		}
-
-		# On affiche le flux
-		header('Content-Type: application/rss+xml; charset='.PLX_CHARSET);
-		echo '<?xml version="1.0" encoding="'.PLX_CHARSET.'" ?>'."\n";
-		echo '<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:atom="http://www.w3.org/2005/Atom">'."\n";
-		echo '<channel>'."\n";
-		echo "\t".'<title>'.plxUtils::strCheck($title).'</title>'."\n";
-		echo "\t".'<description>'.plxUtils::strCheck($this->aConf['description']).'</description>'."\n";
-		echo "\t".'<link>'.$link.'</link>'."\n";
-		echo "\t".'<language>' . $this->aConf['default_lang'] . '</language>'."\n";
-		echo "\t".'<atom:link xmlns:atom="http://www.w3.org/2005/Atom" rel="self" type="application/rss+xml" href="' . $link_feed . '" />'."\n";
-		$last_updated = plxDate::dateIso2rfc822($last_updated);
-		echo "\t".'<lastBuildDate>'.$last_updated.'</lastBuildDate>'."\n";
-		echo "\t".'<generator>PluXml</generator>'."\n";
-		echo $entry;
-		echo '</channel>'."\n";
-		echo '</rss>';
+		# # Commentaires off/on line
+		$sel = ($this->cible == '_') ? 'off' : 'on';
+		$suffix = ($this->cible == '_') ? L_FEED_OFFLINE_COMMENTS : L_FEED_ONLINE_COMMENTS;
+		$ref = ($this->cible == '_') ? 'hors' : 'en';
+		self::__getRssComments(
+			array(
+				'title'	=> htmlspecialchars("{$this->aConf['title']} - $suffix", ENT_XML1),
+				'link'	=> $this->urlRewrite("{$this->racine}core/admin/comments.php?sel={$sel}line&page=1"),
+				'href'	=> $this->urlRewrite("{$this->racine}feed.php?admin{$this->clef}/commentaires/{ref}-ligne"),
+				'hook'	=> 'plxFeedAdminCommentsXml'
+			),
+			true
+		);
 	}
 }
 ?>

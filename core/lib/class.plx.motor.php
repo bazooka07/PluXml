@@ -843,7 +843,8 @@ class plxMotor {
 	public function artInfoFromFilename($filename) {
 
 		# On effectue notre capture d'informations
-		if(preg_match('/(_?\d{4})\.((?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12}).([\w-]+)\.xml$/', $filename, $capture)) {			return array(
+		if(preg_match('/(_?\d{4})\.((?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12}).([\w-]+)\.xml$/', $filename, $capture)) {
+			return array(
 				'artId'		=> $capture[1],
 				'catId'		=> $capture[2],
 				'usrId'		=> $capture[3],
@@ -885,6 +886,7 @@ class plxMotor {
 		$art['thumbnail'] = isset($iTags['thumbnail']) ? plxUtils::getValue($values[$iTags['thumbnail'][0]]['value']) : '';
 		$art['thumbnail_title'] = isset($iTags['thumbnail_title']) ? plxUtils::getValue($values[$iTags['thumbnail_title'][0]]['value']) : '';
 		$art['thumbnail_alt'] = isset($iTags['thumbnail_alt']) ? plxUtils::getValue($values[$iTags['thumbnail_alt'][0]]['value']) : '';
+
 		# Informations obtenues en analysant le nom du fichier
 		$art['filename'] = $filename;
 		$tmp = $this->artInfoFromFilename($filename);
@@ -893,9 +895,10 @@ class plxMotor {
 		$art['categorie'] = $tmp['catId'];
 		$art['url'] = $tmp['artUrl'];
 		$art['date'] = $tmp['artDate'];
-		$art['nb_com'] = $this->getNbCommentaires('/^'.$art['numero'].'.[0-9]{10}.[0-9]+.xml$/');
+		$art['nb_com'] = $this->getNbCommentaires("@^{$art['numero']}\.\d{10}\.\d+.xml$@");
 		$art['date_creation'] = isset($iTags['date_creation']) ? plxUtils::getValue($values[$iTags['date_creation'][0]]['value']) : $art['date'];
 		$art['date_update'] = isset($iTags['date_update']) ? plxUtils::getValue($values[$iTags['date_update'][0]]['value']) : $art['date'];
+
 		# Hook plugins
 		eval($this->plxPlugins->callHook('plxMotorParseArticle'));
 		# On retourne le tableau
