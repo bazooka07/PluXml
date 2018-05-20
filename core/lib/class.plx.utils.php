@@ -667,7 +667,11 @@ class plxUtils {
 	 **/
 	public static function strCheck($str) {
 
-		return htmlspecialchars($str,ENT_QUOTES,PLX_CHARSET);
+		if(!defined('PLX_ADMIN')) {
+			return str_replace('_', '&nbsp;', htmlspecialchars($str, ENT_QUOTES, PLX_CHARSET));
+		} else {
+			return htmlspecialchars($str,ENT_QUOTES,PLX_CHARSET);
+		}
 	}
 
 	/**
