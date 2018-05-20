@@ -271,13 +271,14 @@ input[maxlength="3"] {
 	width: 4rem !important;
 	text-align: right;
 }
-
-#medias-table td {
-	height: 6rem;
+#comments-table tr {
+	vertical-align: top;
 }
-
 #articles-table tr.pin {
 	font-weight: bold;
+}
+#medias-table td {
+	height: 6rem;
 }
 #articles-table td:nth-child(4),
 #comments-table td:nth-child(3),

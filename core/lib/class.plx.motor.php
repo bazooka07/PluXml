@@ -640,8 +640,7 @@ class plxMotor {
 	public function artInfoFromFilename($filename) {
 
 		# On effectue notre capture d'informations
-		if(preg_match('@(_?\d{4})\.((?:draft,|home,)*(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12})\.([\w-]+)\.xml$@',$filename,$capture)) {
-			return array(
+		if(preg_match('/(_?\d{4})\.((?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12}).([\w-]+)\.xml$/', $filename, $capture)) {			return array(
 				'artId'		=> $capture[1],
 				'catId'		=> $capture[2],
 				'usrId'		=> $capture[3],
