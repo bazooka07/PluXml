@@ -354,32 +354,41 @@ class plxShow {
 		if(eval($this->plxMotor->plxPlugins->callHook('plxShowLastCatList'))) return;
 
 		# Si on a la variable extra, on affiche un lien vers la page d'accueil (avec $extra comme nom)
-		if($extra != '') {
-			$name = str_replace('#cat_id','cat-home',$format);
-			$name = str_replace('#cat_url',$this->plxMotor->urlRewrite(),$name);
-			$name = str_replace('#cat_name',plxUtils::strCheck($extra),$name);
-			$name = str_replace('#cat_status',($this->catId()=='home'?'active':'noactive'), $name);
-			$name = str_replace('#art_nb','',$name);
-			echo $name;
+		if(trim($extra) != '') {
+			$replaces = array(
+				'#cat_id'		=> 'cat-home',
+				'#cat_url'		=> $this->plxMotor->urlRewrite(),
+				'#cat_name'		=> plxUtils::strCheck($extra),
+				'#cat_status'	=> ($this->catId() == 'home') ? 'active':'noactive',
+				'#art_nb'		=> ''
+			);
+			echo str_replace(array_keys($replaces), array_values($replaces), $format);
 		}
+
 		# On verifie qu'il y a des categories
 		if($this->plxMotor->aCats) {
-			foreach($this->plxMotor->aCats as $k=>$v) {
-				$in = (empty($include) OR preg_match('/('.$include.')/', $k));
-				$ex = (!empty($exclude) AND preg_match('/('.$exclude.')/', $k));
-				if($in AND !$ex) {
-					if(($v['articles']>0 OR $this->plxMotor->aConf['display_empty_cat']) AND ($v['menu']=='oui') AND $v['active']) { # On a des articles
-						# On modifie nos motifs
-						$name = str_replace('#cat_id','cat-'.intval($k),$format);
-						$name = str_replace('#cat_url',$this->plxMotor->urlRewrite('?categorie'.intval($k).'/'.$v['url']),$name);
-						$name = str_replace('#cat_name',plxUtils::strCheck($v['name']),$name);
-						$name = str_replace('#cat_status',($this->catId()==intval($k)?'active':'noactive'), $name);
-						$name = str_replace('#cat_description',plxUtils::strCheck($v['description']),$name);
-						$name = str_replace('#art_nb',$v['articles'],$name);
-						echo $name;
-					}
+			$includeCats = (!empty(trim($include))) ? explode(',', $include) : false;
+			$excludeCats = (!empty(trim($exclude))) ? explode(',', $exclude) : false;
+			foreach($this->plxMotor->aCats as $cat=>$v) {
+				if(
+					!empty($v['active']) and
+					$v['menu'] == 'oui' and
+					($v['articles'] > 0 or $this->plxMotor->aConf['display_empty_cat']) and
+					(empty($includeCats) or in_array($cat, $includeCats)) and
+					(empty($excludeCats) or !in_array($cat, $excludeCats))
+				) {
+					$intCat = intval($cat);
+					$replaces = array(
+						'#cat_id'			=> "cat-$intCat",
+						'#cat_url'			=> $this->plxMotor->urlRewrite("?categorie{$intCat}/{$v['url']}"),
+						'#cat_name'			=> plxUtils::strCheck($v['name']),
+						'#cat_status'		=> ($this->catId() == $intCat) ? 'active' : 'noactive',
+						'#cat_description'	=> plxUtils::strCheck($v['description']),
+						'#art_nb'			=> $v['articles']
+					);
+					echo str_replace(array_keys($replaces), array_values($replaces), $format);
 				}
-			} # Fin du while
+			}
 		}
 	}
 
@@ -526,7 +535,9 @@ class plxShow {
 			$title = plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('title'));
 			$url = $this->plxMotor->plxRecord_arts->f('url');
 			# On effectue l'affichage
-			echo '<a href="'.$this->plxMotor->urlRewrite('?article'.$id.'/'.$url).'" title="'.$title.'">'.$title.'</a>';
+			$cats = explode(',', $this->plxMotor->plxRecord_arts->f('categorie'));
+			$className = (in_array('pin', $cats)) ? ' class="pin"' : '';
+			echo '<a'.$className.' href="'.$this->plxMotor->urlRewrite('?article'.$id.'/'.$url).'" title="'.$title.'">'.$title.'</a>';
 		} else { # Type normal
 			echo plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('title'));
 		}
@@ -926,10 +937,8 @@ class plxShow {
 		# Hook Plugins
 		if(eval($this->plxMotor->plxPlugins->callHook('plxShowLastArtList'))) return;
 		# Génération de notre motif
-		if(empty($cat_id))
-			$motif = '/^[0-9]{4}.(?:[0-9]|home|,)*(?:'.$this->plxMotor->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
-		else
-			$motif = '/^[0-9]{4}.((?:[0-9]|home|,)*(?:'.str_pad($cat_id,3,'0',STR_PAD_LEFT).')(?:[0-9]|home|,)*).[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+		$selected_cat = (!empty($cat_id)) ? str_pad($cat_id,3,'0',STR_PAD_LEFT) : "(?:{$this->plxMotor->activeCats})";
+		$motif = "@^\d{4}\.(?:home,|pin,|\d{3},)*$selected_cat(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@";
 
 		# Nouvel objet plxGlob et récupération des fichiers
 		$plxGlob_arts = clone $this->plxMotor->plxGlob_arts;
@@ -1813,7 +1822,7 @@ class plxShow {
 
 		# on compte le nombre d'articles pour chaque mois de la période et pour chaque année passée
 		$plxGlob_arts = clone $this->plxMotor->plxGlob_arts;
-		if($files = $plxGlob_arts->query('/^\d{4}\.(?:\d{3},|home,)*('.$this->plxMotor->activeCats.')(?:,\d{3}|,home)*\.\d{3}\.\d{12}\.[\w-]+\.xml$/','art','rsort',0,false,'before')) {
+		if($files = $plxGlob_arts->query('/^\d{4}\.(?:home,|pin,|\d{3},)*('.$this->plxMotor->activeCats.')(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$/','art','rsort',0,false,'before')) {
 			# compte les années en mois !
 			$periode = 12; # on détaille pour les 12 derniers mois
 			$annee_mois_cc = intval(date('Y')) * 12;
@@ -1824,7 +1833,7 @@ class plxShow {
 			$total = 0;
 
 			# récupère l'année et le mois de chaque article
-			$motif = '@^\d{4}\.(?:\d{3}|home)+(?:,\d{3}|,home)*\.\d{3}\.(\d{4})(\d{2})\d{6}\.[\w-]+\.xml$@';
+			$motif = '@.*\.\d{3}\.(\d{4})(\d{2})\d{6}\.[\w-]+\.xml$@';
 			foreach($files as $id => $filename){
 				if(preg_match($motif, $filename, $capture)){
 					$total++;

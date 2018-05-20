@@ -8,6 +8,7 @@
  **/
 class plxGlob {
 
+	const DATE_ART_PATTERN = '@^\d{4}\.[^.]*\.\d{3}\.(\d{12}})@';
 	public $count = 0; # Le nombre de resultats
 	public $aFiles = array(); # Tableau des fichiers
 
@@ -109,47 +110,49 @@ class plxGlob {
 
 		$array=array();
 		$this->count = 0;
+		$allPubs = ($publi === 'all');
 
 		if($this->aFiles) {
 
 			# Pour chaque entree du repertoire
+			$nowEpoc = time();
+			$nowStr = date('YmdHi');
 			foreach ($this->aFiles as $file) {
 
 				if(preg_match($motif,$file)) {
 
-					if($type === 'art') { # Tri selon les dates de publication (article)
-						# On decoupe le nom du fichier
-						$index = explode('.',$file);
-						# On cree un tableau associatif en choisissant bien nos cles et en verifiant la date de publication
-						$key = ($tri === 'alpha' OR $tri === 'ralpha') ? $index[4].'~'.$index[0] : $index[3].$index[0];
-						if($publi === 'before' AND $index[3] <= date('YmdHi'))
-							$array[$key] = $file;
-						elseif($publi === 'after' AND $index[3] >= date('YmdHi'))
-							$array[$key] = $file;
-						elseif($publi === 'all')
-							$array[$key] = $file;
-						# On verifie que l'index existe
-						if(isset($array[$key]))
-							$this->count++; # On incremente le compteur
-					}
-					elseif($type === 'com') { # Tri selon les dates de publications (commentaire)
-						# On decoupe le nom du fichier
-						$index = explode('.',$file);
-						# On cree un tableau associatif en choisissant bien nos cles et en verifiant la date de publication
-						if($publi === 'before' AND $index[1] <= time())
-							$array[ $index[1].$index[0] ] = $file;
-						elseif($publi === 'after' AND $index[1] >= time())
-							$array[ $index[1].$index[0] ] = $file;
-						elseif($publi === 'all')
-							$array[ $index[1].$index[0] ] = $file;
-						# On verifie que l'index existe
-						if(isset($array[ $index[1].$index[0] ]))
-							$this->count++; # On incremente le compteur
-					}
-					else { # Aucun tri
-						$array[] = $file;
-						# On incremente le compteur
-						$this->count++;
+					switch($type) {
+						case 'art':
+							# On decoupe le nom du fichier
+							list($artId, $cats, $author, $datePub, $title, $ext) = explode('.', $file, 6);
+							# On cree un tableau associatif en choisissant bien nos cles et en verifiant la date de publication
+							$key = ($tri === 'alpha' OR $tri === 'ralpha') ? $title.'~'.$artId : $datePub.$artId;
+							if(
+								$allPubs OR
+								($publi === 'before' AND $datePub <= $nowStr) OR
+								($publi === 'after'  AND $datePub >= $nowStr)
+							) {
+	 							$array[$key] = $file;
+								$this->count++; # On incremente le compteur
+							}
+							break;
+						case 'com':
+							# On decoupe le nom du fichier
+							$index = explode('.',$file);
+							# On cree un tableau associatif en choisissant bien nos cles et en verifiant la date de publication
+							if(
+								$allPubs OR
+								($publi === 'before' AND $index[1] <= $nowEpoc) OR
+								($publi === 'after' AND $index[1] >= $nowEpoc)
+							) {
+								$array[ $index[1].$index[0] ] = $file;
+								$this->count++; # On incremente le compteur
+							}
+							break;
+						default: # Aucun tri
+							$array[] = $file;
+							# On incremente le compteur
+							$this->count++;
 					}
 				}
 			}
@@ -172,13 +175,46 @@ class plxGlob {
 	 * @param	depart			indice de départ de la sélection
 	 * @param	limite			nombre d'éléments à sélectionner
 	 * @param	publi			recherche des fichiers avant ou après la date du jour
+	 * @param	pinCount		Nombre d'articles épinglés à afficher
 	 * @return	array ou false
-	 * @author	Anthony GUÉRIN et Florent MONTHEL
+	 * @author	Anthony GUÉRIN, Florent MONTHEL et Jean-Pierre Pourrez (aka bazooka07)
 	 **/
-	public function query($motif,$type='',$tri='',$depart='0',$limite=false,$publi='all') {
+	public function query($motif,$type='',$tri='',$depart='0',$limite=false,$publi='all',$pinCount=0) {
 
 		# Si on a des résultats
 		if($rs = $this->search($motif,$type,$tri,$publi)) {
+
+			if(!empty($tri) and $type === 'art' and $pinCount != 0) {
+				# On sépare tous les articles épinglés
+				$arts = array_filter(
+					$rs,
+					function($key) {
+						return preg_match('@^\d{4}\.(?:home,|draft,|\d{3},)*pin(?:,\d{3})*\.@', $key);
+					}
+				);
+				if(!empty($arts)) {
+					foreach(array_keys($arts) as $key) {
+						unset($rs[$key]);
+					}
+					if(count($arts) > 1) {
+						# Tri des articles épinglés
+						uasort($arts, function($key1, $key2) {
+							if(
+								preg_match(self::DATE_ART_PATTERN, $key1, $matches1) and
+								preg_match(self::DATE_ART_PATTERN, $key2, $matches2)
+							) {
+								return strcmp($matches1[1], $matches2[1]);
+							} else {
+								return 0;
+							}
+						});
+						# On garde la quantité demandée
+						if($pinCount > 0) {
+							$arts = array_slice($arts, 0, $pinCount);
+						}
+					}
+				}
+			}
 
 			# Ordre de tri du tableau
 			if ($type != '') {
@@ -216,7 +252,11 @@ class plxGlob {
 			}
 
 			# On enlève les clés du tableau
-			$rs = array_values($rs);
+			if(!empty($arts)) {
+				$rs = array_merge(array_values($arts), array_values($rs));
+			} else {
+				$rs = array_values($rs);
+			}
 			# On a une limite, on coupe le tableau
 			if($limite)
 				$rs = array_slice($rs,$depart,$limite);
@@ -227,5 +267,5 @@ class plxGlob {
 		return false;
 	}
 
-} 
+}
 ?>

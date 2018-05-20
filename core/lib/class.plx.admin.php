@@ -756,7 +756,7 @@ RewriteRule ^feed\/(.*)$ feed.php?$1 [L]
 			$id = $this->nextIdArticle();
 
 		# Vérification de l'intégrité de l'identifiant
-		if(!preg_match('/^_?[0-9]{4}$/',$id)) {
+		if(!preg_match('/^_?\d{4}$/',$id)) {
 			$id='';
 			return L_ERR_INVALID_ARTICLE_IDENT;
 		}
@@ -808,7 +808,7 @@ RewriteRule ^feed\/(.*)$ feed.php?$1 [L]
 		eval($this->plxPlugins->callHook('plxAdminEditArticleXml'));
 		$xml .= "</document>\n";
 		# Recherche du nom du fichier correspondant à l'id
-		$oldArt = $this->plxGlob_arts->query('/^'.$id.'.(.*).xml$/','','sort',0,1,'all');
+		$oldArt = $this->plxGlob_arts->query('/^'.$id.'\.(.*)\.xml$/','','sort',0,1,'all');
 
 		# Si demande de modération de l'article
 		if(isset($content['moderate']))
@@ -819,7 +819,7 @@ RewriteRule ^feed\/(.*)$ feed.php?$1 [L]
 
 		# On genère le nom de notre fichier
 		$time = $content['date_publication_year'].$content['date_publication_month'].$content['date_publication_day'].substr(str_replace(':','',$content['date_publication_time']),0,4);
-		if(!preg_match('/^[0-9]{12}$/',$time)) $time = date('YmdHi'); # Check de la date au cas ou...
+		if(!preg_match('/^\d{12}$/',$time)) $time = date('YmdHi'); # Check de la date au cas ou...
 		if(empty($content['catId'])) $content['catId']=array('000'); # Catégorie non classée
 		$filename = PLX_ROOT.$this->aConf['racine_articles'].$id.'.'.implode(',', $content['catId']).'.'.trim($content['author']).'.'.$time.'.'.$content['url'].'.xml';
 		# On va mettre à jour notre fichier

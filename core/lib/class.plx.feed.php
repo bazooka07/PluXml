@@ -74,24 +74,28 @@ class plxFeed extends plxMotor {
 		# Hook plugins
 		if(eval($this->plxPlugins->callHook('plxFeedPreChauffageBegin'))) return;
 
-		if($this->get AND preg_match('#^(?:atom/|rss/)?categorie([0-9]+)/?#',$this->get,$capture)) {
+		$format = '@^%s\.%s\.\d{3}\.\d{12}\.[\w-]*\.xml$@';
+		$allCats = "(?:home|pin|{$this->activeCats})(?:,pin|,\d{3})*";
+		if($this->get AND preg_match('#^(?:atom/|rss/)?categorie(\d+)/?#', $this->get, $capture)) {
+			# Flux pour une catégorie
 			$this->mode = 'article'; # Mode du flux
 			# On récupère la catégorie cible
-			$this->cible = str_pad($capture[1],3,'0',STR_PAD_LEFT); # On complète sur 3 caractères
+			$this->cible = str_pad($capture[1], 3, '0', STR_PAD_LEFT); # On complète sur 3 caractères
 			# On modifie le motif de recherche
-			$this->motif = '/^[0-9]{4}.((?:[0-9]|home|,)*(?:'.$this->cible.')(?:[0-9]|home|,)*).[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
-		}
-		elseif($this->get AND preg_match('#^(?:atom/|rss/)?commentaires/?$#',$this->get)) {
+			$cats = "(?:home,|pin,|\d{3},)*{$this->cible}(?:,\d{3})*";
+			$this->motif = sprintf($format, '\d{4}', $cats);
+		} elseif($this->get AND preg_match('@^(?:atom/|rss/)?commentaires/?$@', $this->get)) {
+			# Flux de tous les commentaires
 			$this->mode = 'commentaire'; # Mode du flux
-		}
-		elseif($this->get AND preg_match('#^(?:atom/|rss/)?tag\/([a-z0-9-]+)/?$#',$this->get,$capture)) {
+		} elseif($this->get AND preg_match('@^(?:atom/|rss/)?tag/([\w-]+)/?$@', $this->get, $capture)) {
+			# Flux pour un mot-clé
 			$this->mode = 'tag';
 			$this->cible = $capture[1];
 			$ids = array();
 			$datetime = date('YmdHi');
 			foreach($this->aTags as $idart => $tag) {
-				if($tag['date']<=$datetime) {
-					$tags = array_map("trim", explode(',', $tag['tags']));
+				if($tag['date'] <= $datetime) {
+					$tags = array_map('trim', explode(',', $tag['tags']));
 					$tagUrls = array_map(array('plxUtils', 'title2url'), $tags);
 					if(in_array($this->cible, $tagUrls)) {
 						if(!isset($ids[$idart])) $ids[$idart] = $idart;
@@ -103,19 +107,19 @@ class plxFeed extends plxMotor {
 				}
 			}
 			if(sizeof($ids)>0) {
-				$this->motif = '/('.implode('|', $ids).').(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+				$allIds = '(?:'.implode('|', $ids).')';
+				$this->motif = sprintf($format, $allIds, $allCats);
 			} else
 				$this->motif = '';
-
-		}
-		elseif($this->get AND preg_match('#^(?:atom/|rss/)?commentaires/article([0-9]+)/?$#',$this->get,$capture)) {
+		} elseif($this->get AND preg_match('@^(?:atom/|rss/)?commentaires/article(\d+)/?$@', $this->get, $capture)) {
+			# Flux des commentaires d'un article
 			$this->mode = 'commentaire'; # Mode du flux
 			# On récupère l'article cible
-			$this->cible = str_pad($capture[1],4,'0',STR_PAD_LEFT); # On complète sur 4 caractères
+			$this->cible = str_pad($capture[1], 4, '0', STR_PAD_LEFT); # On complète sur 4 caractères
 			# On modifie le motif de recherche
-			$this->motif = '/^'.$this->cible.'.(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
-		}
-		elseif($this->get AND preg_match('#^admin([a-zA-Z0-9]+)/commentaires/(hors|en)-ligne/?$#',$this->get,$capture)) {
+			$this->motif = sprintf($format, $this->cible, $allCats);
+		} elseif($this->get AND preg_match('@^admin([\w-]+)/commentaires/(hors|en)-ligne/?$@', $this->get, $capture)) {
+			# Tous les commentaires pour l'administrateur
 			$this->mode = 'admin'; # Mode du flux
 			$this->cible = '-';	# /!\: il ne faut pas initialiser à blanc sinon ça prend par défaut les commentaires en ligne (faille sécurité)
 			if ($capture[1] == $this->clef) {
@@ -125,13 +129,13 @@ class plxFeed extends plxMotor {
 					$this->cible = '';
 			}
 		} else {
+			# Tous les articles
 			$this->mode = 'article'; # Mode du flux
 			# On modifie le motif de recherche
-			$this->motif = '/^[0-9]{4}.(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.[0-9]{12}.[a-z0-9-]+.xml$/';
+			$this->motif = sprintf($format, '\d{4}', $allCats);
 		}
 		# Hook plugins
 		eval($this->plxPlugins->callHook('plxFeedPreChauffageEnd'));
-
 	}
 
 	/**
@@ -155,37 +159,33 @@ class plxFeed extends plxMotor {
 				$regex = '/^'.$this->cible.'.[0-9]{10}-[0-9]+.xml$/';
 				$this->getCommentaires($regex,'rsort',0,$this->bypage);
 			}
-		}
-		# Flux de commentaires global
-		elseif($this->mode == 'commentaire') {
-			$regex = '/^[0-9]{4}.[0-9]{10}-[0-9]+.xml$/';
-			$this->getCommentaires($regex,'rsort',0,$this->bypage);
-		}
-		# Flux admin
-		elseif($this->mode == 'admin') {
+		} elseif($this->mode == 'commentaire') {
+			# Flux de commentaires global
+			$regex = '@^\d{4}\.\d{10}-\d+\.xml$@';
+			$this->getCommentaires($regex, 'rsort', 0, $this->bypage);
+		} elseif($this->mode == 'admin') {
+			# Flux admin
 			if(empty($this->clef)) { # Clef non initialisée
 				header('Content-Type: text/plain; charset='.PLX_CHARSET);
 				echo L_FEED_NO_PRIVATE_URL;
 				exit;
 			}
 			# On récupère les commentaires
-			$this->getCommentaires('/^'.$this->cible.'[0-9]{4}.[0-9]{10}-[0-9]+.xml$/','rsort',0,$this->bypage,'all');
-		}
-		# Flux d'articles pour un tag
-		elseif($this->mode == 'tag') {
+			$this->getCommentaires("@^{$this->cible}\.\d{4}\.\d{10}-\d+\.xml$@", 'rsort', 0, $this->bypage, 'all');
+		} elseif($this->mode == 'tag') {
+			# Flux d'articles pour un tag
 			if(empty($this->motif)) {
 				header('Location: '.$this->urlRewrite('?tag/'.$this->cible.'/'));
 				exit;
 			} else {
 				$this->getArticles(); # Récupération des articles (on les parse)
 			}
-		}
-		# Flux d'articles
-		else {
+		} else {
 			# Flux des articles d'une catégorie précise
 			if($this->cible) {
 				# On va tester la catégorie
-				if(empty($this->aCats[$this->cible]) OR !$this->aCats[$this->cible]['active']) { # Pas de catégorie, on redirige
+				if(empty($this->aCats[$this->cible]) OR !$this->aCats[$this->cible]['active']) {
+					# Pas de catégorie, on redirige
 					$this->cible = $this->cible + 0;
 					header('Location: '.$this->urlRewrite('?categorie'.$this->cible.'/'));
 					exit;

@@ -113,6 +113,7 @@ $LANG = array(
 'L_NOW'								=> 'maintenant',
 'L_ARTICLE_CATEGORIES' 				=> 'Emplacements',
 'L_CATEGORY_HOME_PAGE' 			 	=> 'Page d\'accueil',
+'L_CATEGORY_PIN'	 			 	=> 'Article épinglé',
 'L_NEW_CATEGORY' 			 		=> 'Nouvelle catégorie',
 'L_ARTICLE_TAGS_FIELD' 				=> 'Mots clés',
 'L_ARTICLE_TAGS_FIELD_TITLE' 		=> 'Séparer les mots clés par une virgule',
@@ -366,6 +367,7 @@ $LANG = array(
 'L_CONFIG_VIEW_FEEDS_FOOTER'		=> 'Texte à ajouter comme signature au bas de chaque flux RSS des articles',
 'L_CONFIG_VIEW_UPDATE'				=> 'Modifier les options d\'affichage',
 'L_CONFIG_VIEW_DISPLAY_EMPTY_CAT'	=> 'Afficher les catégories sans article',
+'L_CONFIG_VIEW_PIN_ARTICLES_COUNT'	=> 'Nombre d\'articles épinglés à afficher',
 'L_CONFIG_HOMETEMPLATE'				=> 'Template de la page d\'accueil',
 
 # parametres_avances.php

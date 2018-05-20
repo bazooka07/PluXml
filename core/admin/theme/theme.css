@@ -271,12 +271,17 @@ input[maxlength="3"] {
 	width: 4rem !important;
 	text-align: right;
 }
-
-#medias-table td {
-	height: 6rem;
+#comments-table tr {
+	vertical-align: top;
+}
+#articles-table tr.pin {
+	font-weight: bold;
 }
 #comments-table tr {
 	vertical-align: top;
+}
+#medias-table td {
+	height: 6rem;
 }
 /* #comments-table td:nth-child(3), */
 #medias-table td:nth-of-type(2) {

@@ -580,7 +580,8 @@ class plxMotor {
 		$this->aConf['racine_plugins'] = plxUtils::getValue($this->aConf['racine_plugins'], 'plugins/');
 		$this->aConf['racine_themes'] = plxUtils::getValue($this->aConf['racine_themes'], 'themes/');
 		$this->aConf['mod_art'] = plxUtils::getValue($this->aConf['mod_art'],0);
-		$this->aConf['display_empty_cat'] = plxUtils::getValue($this->aConf['display_empty_cat'],0);
+		$this->aConf['display_empty_cat'] = plxUtils::getValue($this->aConf['display_empty_cat'], 0);
+		$this->aConf['pin_articles_count'] = plxUtils::getValue($this->aConf['pin_articles_count'],0);
 		$this->aConf['timezone'] = plxUtils::getValue($this->aConf['timezone'],@date_default_timezone_get());
 		$this->aConf['thumbs'] = isset($this->aConf['thumbs']) ? $this->aConf['thumbs'] : 1;
 		$this->aConf['hometemplate'] = isset($this->aConf['hometemplate']) ? $this->aConf['hometemplate'] : 'home.php';
@@ -649,7 +650,7 @@ class plxMotor {
 				$this->aCats[$number]['homepage'] = in_array($this->aCats[$number]['homepage'],array('0','1')) ? $this->aCats[$number]['homepage'] : 1;
 				if($this->aCats[$number]['active'] AND $this->aCats[$number]['homepage']) $homepageCats[]=$number;
 				# Recuperation du nombre d'article de la categorie
-				$motif = '/^[0-9]{4}.[home,|0-9,]*'.$number.'[0-9,]*.[0-9]{3}.[0-9]{12}.[A-Za-z0-9-]+.xml$/';
+				$motif = "@^\d{4}\.(?:home,|pin,|\d{3},)*{$number}(?:,\d{3})*\.\d{3}\.\d{12}\.[\w-]+\.xml$@";
 				$arts = $this->plxGlob_arts->query($motif,'art','',0,false,'before');
 				$this->aCats[$number]['articles'] = ($arts?sizeof($arts):0);
 				# Hook plugins
@@ -819,7 +820,8 @@ class plxMotor {
 		# On calcule la valeur start
 		$start = $this->bypage*($this->page-1);
 		# On recupere nos fichiers (tries) selon le motif, la pagination, la date de publication
-		if($aFiles = $this->plxGlob_arts->query($this->motif,'art',$this->tri,$start,$this->bypage,$publi)) {
+		$pinArtsCount = (!defined('PLX_ADMIN')) ? $this->aConf['pin_articles_count'] : 0;
+		if($aFiles = $this->plxGlob_arts->query($this->motif, 'art', $this->tri, $start, $this->bypage, $publi, $pinArtsCount)) {
 			# on mémorise le nombre total d'articles trouvés
 			foreach($aFiles as $k=>$v) # On parcourt tous les fichiers
 				$array[$k] = $this->parseArticle(PLX_ROOT.$this->aConf['racine_articles'].$v);
@@ -841,8 +843,7 @@ class plxMotor {
 	public function artInfoFromFilename($filename) {
 
 		# On effectue notre capture d'informations
-		if(preg_match('/(_?[0-9]{4}).([0-9,|home|draft]*).([0-9]{3}).([0-9]{12}).([a-z0-9-]+).xml$/',$filename,$capture)) {
-			return array(
+		if(preg_match('/(_?\d{4})\.((?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12}).([\w-]+)\.xml$/', $filename, $capture)) {			return array(
 				'artId'		=> $capture[1],
 				'catId'		=> $capture[2],
 				'usrId'		=> $capture[3],
@@ -850,6 +851,7 @@ class plxMotor {
 				'artUrl'	=> $capture[5]
 			);
 		}
+		return false;
 	}
 
 	/**
@@ -1304,7 +1306,7 @@ XML_ENDS;
 	/**
 	 * Méthode qui comptabilise le nombre d'articles du site.
 	 *
-	 * @param	select	critere de recherche: draft, published, all, n° categories séparés par un |
+	 * @param	select	critere de recherche: home, pin, draft, published, all, n° categories séparés par un |
 	 * @param	userid	filtre sur les articles d'un utilisateur donné
 	 * @param	mod		filtre sur les articles en attente de validation
 	 * @param	publi	selection en fonciton de la date du jour (all, before, after)
@@ -1314,20 +1316,17 @@ XML_ENDS;
 	 **/
 	public function nbArticles($select='all', $userId='[0-9]{3}', $mod='_?', $publi='all') {
 
-		$nb = 0;
-		if($select == 'all')
-			$motif = '[home|draft|0-9,]*';
-		elseif($select=='published')
-			$motif = '[home|0-9,]*';
-		elseif($select=='draft')
-			$motif = '[\w,]*[draft][\w,]*';
-		else
-			$motif = $select;
+		switch($select) {
+			case 'all' :		$motif = '(?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*'; break;
+			case 'published' :	$motif = '(?:home|pin|\d{3})(?:,pin|,\d{3})*'; break;
+			case 'draft' :		$motif = 'draft(?:,home|,pin|,\d{3})+'; break;
+			default :			$motif = "(?:$select)";
+		}
 
-		if($arts = $this->plxGlob_arts->query('/^'.$mod.'[0-9]{4}.('.$motif.').'.$userId.'.[0-9]{12}.[a-z0-9-]+.xml$/', 'art', '', 0, false, $publi))
-			$nb = sizeof($arts);
-
-		return $nb;
+		if($arts = $this->plxGlob_arts->query("@$mod\d{4}\.{$motif}\.{$userId}\.\d{12}\.[\w-]+\.xml$@", 'art', '', 0, false, $publi)) {
+			return sizeof($arts);
+		}
+		return 0;
 	}
 
 	/**
@@ -1366,11 +1365,12 @@ XML_ENDS;
 	 **/
 	public function getActiveArts() {
 		if($this->plxGlob_arts->aFiles) {
-			$datetime=date('YmdHi');
+			$datetime = date('YmdHi');
+			$pattern = "@^(\d{4})\.(?:home,|pin,|\d{3},)*(?:{$this->activeCats})(?:,\d{3})*\.\d{3}\.(\d{12})\.[\w-]+\.xml$@";
 			foreach($this->plxGlob_arts->aFiles as $filename) {
-				if(preg_match('/^([0-9]{4}).(?:[0-9]|home|,)*(?:'.$this->activeCats.'|home)(?:[0-9]|home|,)*.[0-9]{3}.([0-9]{12}).[a-z0-9-]+.xml$/', $filename, $capture)) {
-					if($capture[2]<=$datetime) { # on ne prends que les articles publiés
-						$this->activeArts[$capture[1]]=1;
+				if(preg_match($pattern, $filename, $capture)) {
+					if($capture[2] <= $datetime) { # on ne prends que les articles publiés
+						$this->activeArts[$capture[1]] = 1;
 					}
 				}
 			}
