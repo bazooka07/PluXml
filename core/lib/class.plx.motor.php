@@ -8,6 +8,8 @@
  **/
 class plxMotor {
 
+	const TIME_MASK = 4194303; # 2 puissance 22 - 1; base_convert(4194303, 10, 16) -> 3fffff; => 48,54 jours
+
 	public $get = false; # Donnees variable GET
 	public $racine = false; # Url de PluXml
 	public $path_url = false; # chemin de l'url du site
@@ -1144,6 +1146,18 @@ XML_ENDS;
 					}
 				}
 			}
+		}
+	}
+
+	public function pluginsCss($admin=false) {
+		$cible = ($admin) ? 'admin' : 'site';
+		$filename = "{$this->aConf['racine_plugins']}$cible.css";
+		if(is_file(PLX_ROOT.$filename)) {
+			$href = ($admin) ? PLX_ROOT.$filename : $this->urlRewrite($filename);
+			$href .= '?d='.base_convert(filemtime(PLX_ROOT.$filename) & self::TIME_MASK, 10, 36);
+			echo <<< LINK
+<link rel="stylesheet" type="text/css" href="$href" media="screen" />\n
+LINK;
 		}
 	}
 
