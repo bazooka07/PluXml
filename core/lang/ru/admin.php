@@ -211,6 +211,7 @@ $LANG = array(
 'L_COMMENT_TYPE_FIELD'										=> 'Тип комментарий',
 'L_COMMENT_DATE_FIELD'										=> 'Дата и время публикации',
 'L_COMMENT_IP_FIELD'										=> 'Ip',
+'L_COMMENT_USER_AGENT_FIELD'								=> 'агент пользователя',
 'L_COMMENT_SITE_FIELD'										=> 'Сайт',
 'L_COMMENT_EMAIL_FIELD'										=> 'E-mail',
 'L_COMMENT_STATUS_FIELD'									=> 'Статус',
@@ -248,7 +249,9 @@ $LANG = array(
 'L_COMMENTS_GLOBAL_SCOPE'									=> 'весь сайт',
 
 'L_COMMENTS_LIST_DATE'										=> 'Дата',
+'L_COMMENTS_LIST_IP_ADDRESS'								=> 'Айпи адрес',
 'L_COMMENTS_LIST_AUTHOR'									=> 'Автор',
+'L_COMMENTS_LIST_SITE'										=> 'Посмотрите на этот сайт',
 'L_COMMENTS_LIST_MESSAGE'									=> 'Сообщение',
 'L_COMMENTS_LIST_ACTION'									=> 'Действие',
 'L_COMMENT_EDIT'											=> 'Изменить',

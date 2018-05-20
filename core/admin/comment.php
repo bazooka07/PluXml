@@ -121,6 +121,8 @@ if($plxAdmin->plxRecord_coms->f('type') != 'admin') {
 	$content = plxUtils::strCheck($plxAdmin->plxRecord_coms->f('content'));
 }
 
+$ipAddr = $plxAdmin->plxRecord_coms->f('ip');
+$userAgent = $plxAdmin->plxRecord_coms->f('user_agent');
 ?>
 
 <form action="comment.php<?php echo (!empty($_GET['a'])?'?a='.plxUtils::strCheck($_GET['a']):'') ?>" method="post" id="form_comment">
@@ -146,7 +148,8 @@ if($plxAdmin->plxRecord_coms->f('type') != 'admin') {
 	<?php eval($plxAdmin->plxPlugins->callHook('AdminCommentTop')) # Hook Plugins ?>
 
 	<ul class="unstyled-list">
-		<li><?php echo L_COMMENT_IP_FIELD ?> : <?php echo $plxAdmin->plxRecord_coms->f('ip'); ?></li>
+		<li data-ip="<?php echo $userAgent; ?>"><?php echo L_COMMENT_USER_AGENT_FIELD; ?> : <?php echo $userAgent; ?></li>
+		<li data-ip="<?php echo $ipAddr; ?>"><?php echo L_COMMENT_IP_FIELD ?> : <?php echo $ipAddr; ?></li>
 		<li><?php echo L_COMMENT_STATUS_FIELD ?> : <?php echo $statut; ?></li>
 		<li><?php echo L_COMMENT_TYPE_FIELD ?> : <strong><?php echo $plxAdmin->plxRecord_coms->f('type'); ?></strong></li>
 		<li><?php echo L_COMMENT_LINKED_ARTICLE_FIELD ?> : <?php echo $article; ?></li>

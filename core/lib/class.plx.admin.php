@@ -901,6 +901,7 @@ RewriteRule ^feed\/(.*)$ feed.php?$1 [L]
 		$comment['content'] = strip_tags(trim($content['content']),'<a>,<strong>');
 		$comment['site'] = $this->racine;
 		$comment['ip'] = plxUtils::getIp();
+		$comment['user_agent'] = (!empty($_SERVER['HTTP_USER_AGENT'])) ? plxUtils::strCheck($_SERVER['HTTP_USER_AGENT']) : '';
 		$comment['type'] = 'admin';
 		$comment['mail'] = $this->aUsers[$_SESSION['user']]['email'];
 		$comment['parent'] = $content['parent'];
@@ -951,6 +952,7 @@ RewriteRule ^feed\/(.*)$ feed.php?$1 [L]
 			$comment['content'] = strip_tags(trim($content['content']),'<a>,<strong>');
 		}
 		$comment['ip'] = $com['ip'];
+		$comment['user_agent'] = $com['user_agent'];
 		$comment['type'] = $com['type'];
 		$comment['mail'] = $content['mail'];
 		$comment['site'] = $content['site'];
