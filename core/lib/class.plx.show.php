@@ -539,18 +539,27 @@ class plxShow {
 		if(!empty($filename)) {
 			$img_url = $this->plxMotor->urlRewrite($filename);
 			$img_thumb = plxUtils::thumbName($filename);
+			if(file_exists(PLX_ROOT.$img_thumb)) {
+				$img_thumb_url = $this->plxMotor->urlRewrite($img_thumb);
+				$img_size = getimagesize(PLX_ROOT.$img_thumb);
+			} else {
+				$img_thumb_url = $img_url;
+				$img_size = getimagesize(PLX_ROOT.$img_url);
+			}
 			$result = str_replace(
 				array(
 					'#img_url',
 					'#img_thumb_url',
 					'#img_title',
-					'#img_alt'
+					'#img_alt',
+					'#img_size'
 				),
 				array(
 					$img_url, // #img_url
-					(file_exists(PLX_ROOT.$img_thumb)) ? $this->plxMotor->urlRewrite($img_thumb) : $img_url, // #img_thumb_url
+					$img_thumb_url, // #img_thumb_url
 					plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('thumbnail_title')), // #img_title
-					$this->plxMotor->plxRecord_arts->f('thumbnail_alt') // #img_alt
+					$this->plxMotor->plxRecord_arts->f('thumbnail_alt'), // #img_alt
+					$img_size[3]
 				),
 				$format
 			);
