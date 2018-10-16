@@ -690,12 +690,17 @@ th.checkbox {
 }
 /* ----------- gestion des themes ----------- */
 
+#themes-table label {
+	cursor: pointer;
+}
+
 .img-preview {
 	width: 200px;
 	max-width: 200px;
 	height: 200px;
 	background-color: #ccc;
-	border: 1px solid #ddd;
+	border: 1px solid;
+	border-color: #ddd;
 	padding: 5px;
 	-moz-border-radius: 7px;
 	-webkit-border-radius: 7px;
@@ -704,7 +709,7 @@ th.checkbox {
 
 .img-preview.current {
 	background-color: #E4EFFF !important;
-	border: 1px solid #9FC6FF;
+	border-color: #9FC6FF;
 }
 
 tr.checked {
