@@ -895,7 +895,7 @@ class plxMotor {
 		$art['categorie'] = $tmp['catId'];
 		$art['url'] = $tmp['artUrl'];
 		$art['date'] = $tmp['artDate'];
-		$art['nb_com'] = $this->getNbCommentaires("@^{$art['numero']}\.\d{10}\.\d+.xml$@");
+		$art['nb_com'] = $this->getNbCommentaires("@^${art['numero']}\.\d{10,}-\d+\.xml$@");
 		$art['date_creation'] = isset($iTags['date_creation']) ? plxUtils::getValue($values[$iTags['date_creation'][0]]['value']) : $art['date'];
 		$art['date_update'] = isset($iTags['date_update']) ? plxUtils::getValue($values[$iTags['date_update'][0]]['value']) : $art['date'];
 
