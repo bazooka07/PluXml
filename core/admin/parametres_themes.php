@@ -37,15 +37,15 @@ class plxThemes {
 	public function getThemes() {
 		# on mets le theme actif en début de liste
 		if(is_dir($this->racineTheme.$this->activeTheme))
-			$this->aThemes[$this->activeTheme] = $this->activeTheme;
+			$this->aThemes[] = $this->activeTheme;
 		# liste des autres themes dispos
 		$files = plxGlob::getInstance($this->racineTheme, true);
 
-		if($styles = $files->query("/[a-z0-9-_\.\(\)]+/i", "", "sort")) {
+		if($styles = $files->query("/^[\w-.()]+$/i", "", "sort")) {
 			foreach($styles as $k=>$v) {
 				if(is_file($this->racineTheme.$v.'/infos.xml')) {
 					if(substr($v,0,7) != 'mobile.' AND $v!=$this->activeTheme)
-						$this->aThemes[$v] = $v;
+						$this->aThemes[] = $v;
 				}
 			}
 		}
@@ -117,29 +117,29 @@ $plxThemes = new plxThemes(PLX_ROOT.$plxAdmin->aConf['racine_themes'], $plxAdmin
 				</tr>
 			</thead>
 			<tbody>
-				<?php
-				if($plxThemes->aThemes) {
-					$num=0;
-					foreach($plxThemes->aThemes as $theme) {
+<?php
+				if(!empty($plxThemes->aThemes)) {
+					foreach($plxThemes->aThemes as $i=>$theme) {
+						$checked = $theme==$plxAdmin->aConf['style'] ? ' checked="checked"' : '';
 						echo '<tr>';
 						# radio
-						$checked = $theme==$plxAdmin->aConf['style'] ? ' checked="checked"' : '';
-						echo '<td><input'.$checked.' type="radio" name="style" value="'.$theme.'" /></td>';
+						echo '<td><input id="id_theme-'.$i.'"'.$checked.' type="radio" name="style" value="'.$theme.'" /></td>';
 						# img preview
-						echo '<td>'.$plxThemes->getImgPreview($theme).'</td>';
+						echo '<td><label for="id_theme-'.$i.'">'.$plxThemes->getImgPreview($theme).'</label></td>';
 						# theme infos
 						echo '<td class="wrap" style="vertical-align:top">';
 							if($aInfos = $plxThemes->getInfos($theme)) {
 								echo '<strong>'.$aInfos['title'].'</strong><br />';
 								echo 'Version : <strong>'.$aInfos['version'].'</strong> - ('.$aInfos['date'].')<br />';
 								echo L_PLUGINS_AUTHOR.' : '.$aInfos['author'].' - <a href="'.$aInfos['site'].'" title="">'.$aInfos['site'].'</a>';
-								echo '<br />'.$aInfos['description'].'<br />';
+								echo '<br />'.nl2br($aInfos['description']);
 							} else {
 								echo '<strong>'.$theme.'</strong>';
 							}
+							echo "<br /><em>".L_MEDIAS_FOLDER." : $theme</em>";
 							# lien aide
 							if(is_file(PLX_ROOT.$plxAdmin->aConf['racine_themes'].$theme.'/lang/'.$plxAdmin->aConf['default_lang'].'-help.php'))
-								echo '<a title="'.L_HELP_TITLE.'" href="parametres_help.php?help=theme&amp;page='.urlencode($theme).'">'.L_HELP.'</a>';
+								echo '<br /><a title="'.L_HELP_TITLE.'" href="parametres_help.php?help=theme&amp;page='.urlencode($theme).'">'.L_HELP.'</a>';
 
 						echo '</td>';
 						echo '</tr>';
@@ -147,7 +147,7 @@ $plxThemes = new plxThemes(PLX_ROOT.$plxAdmin->aConf['racine_themes'], $plxAdmin
 				} else {
 					echo '<tr><td colspan="2" class="center">'.L_NONE1.'</td></tr>';
 				}
-				?>
+?>
 			</tbody>
 		</table>
 	</div>
