@@ -139,7 +139,11 @@ class plxMotor {
 	 * */
 	private function __prechauffage_blog($artQuery) {
 		# /^(blog|blog\/page[0-9]*|\/?page[0-9]*)$/
-		if(empty($this->get) or preg_match('@^(blog(?:/page\d+)?|/?page\d+)$@',$this->get)) {
+		if(
+			empty($this->get) or
+			preg_match('@^(blog(?:/page\d+)?|/?page\d+)$@', $this->get) or
+			!preg_match('@^(?:article|static|categorie|archives|tag|preview|telechargement|download)[\b\d/]+@', $this->get)
+		) {
 			$this->mode = 'home';
 			$this->template = $this->aConf['hometemplate'];
 			$this->bypage = $this->aConf['bypage']; # Nombre d'article par page
