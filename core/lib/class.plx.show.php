@@ -206,14 +206,19 @@ FMT3;
 		# Hook Plugins
 		if(eval($this->plxMotor->plxPlugins->callHook('plxShowPageTitle'))) return;
 
+		$patterns = array('_', '|');
+		$subtitle = str_replace($patterns, ' ', $this->plxMotor->aConf['title']);
 		switch($this->plxMotor->mode) {
+			case 'article':
+				$title_htmltag = trim($this->plxMotor->plxRecord_arts->f('title_htmltag'));
+				$title = !empty($title_htmltag) ? $title_htmltag : $this->plxMotor->plxRecord_arts->f('title');
+				break;
 			case 'categorie':
 				$title_htmltag = trim($this->plxMotor->aCats[$this->plxMotor->cible ]['title_htmltag']);
 				$title = !empty($title_htmltag) ? $title_htmltag : $this->plxMotor->aCats[$this->plxMotor->cible]['name'];
 				break;
-			case 'article':
-				$title_htmltag = trim($this->plxMotor->plxRecord_arts->f('title_htmltag'));
-				$title = !empty($title_htmltag) ? $title_htmltag : $this->plxMotor->plxRecord_arts->f('title');
+			case 'tags':
+				$title = L_PAGETITLE_TAG.' '.$this->plxMotor->cibleName;
 				break;
 			case 'static':
 				$title_htmltag =  trim($this->plxMotor->aStats[$this->plxMotor->cible ]['title_htmltag']);
@@ -227,22 +232,14 @@ FMT3;
 					$title = L_PAGETITLE_ARCHIVES.$day.$month.$year;
 				}
 				break;
-			case 'tags':
-				$title = L_PAGETITLE_TAG.' '.$this->plxMotor->cibleName;
-				break;
 			case 'erreur':
 				$title = $this->plxMotor->plxErreur->getMessage();
 				break;
+			default: // mode == 'home' included
+				$title = $subtitle;
+				$subtitle = str_replace($patterns, ' ', $this->plxMotor->aConf['description']);
 		}
-
-		$patterns = array('_', '|');
-		$subtitle = str_replace($patterns, ' ', $this->plxMotor->aConf['title']);
-		if(empty($title)) {
-			$title = $subtitle;
-			$subtitle = str_replace($patterns, ' ', $this->plxMotor->aConf['description']);
-		} else {
-			$title = str_replace($patterns, ' ', $title);
-		}
+		// $title = str_replace($patterns, ' ', $title);
 		$replaces = array(
 			'#title'	=> $title,
 			'#subtitle'	=> $subtitle
@@ -254,15 +251,8 @@ FMT3;
 		) {
 			$format = trim($capture[1]);
 		}
-		if(empty($format)) {
-			$format = '#title - #subtitle';
-		}
-
-		echo plxUtils::strCheck(str_replace(
-			array_keys($replaces),
-			array_values($replaces),
-			$format
-		));
+		if(empty($format)) { $format = '#title - #subtitle'; }
+		echo plxUtils::strCheck(trim(strtr($format, $replaces), ' - '));
 	}
 
 	/**
@@ -358,7 +348,7 @@ FMT3;
 	 * @scope	global
 	 * @author	Anthony GUÉRIN, Florent MONTHEL, Stephane F
 	 **/
-	public function catList($extra='', $format='<li id="#cat_id" class="#cat_status"><a href="#cat_url" title="#cat_name">#cat_name</a></li>', $include='', $exclude='') {
+	public function catList($extra='', $format='<li id="#cat_id" class="#cat_status"><a href="#cat_url" title="#cat_name">#cat_name</a></li>', $include=false, $exclude=false) {
 		# Hook Plugins
 		if(eval($this->plxMotor->plxPlugins->callHook('plxShowLastCatList'))) return;
 
@@ -371,31 +361,31 @@ FMT3;
 				'#cat_status'	=> ($this->catId() == 'home') ? 'active':'noactive',
 				'#art_nb'		=> ''
 			);
-			echo str_replace(array_keys($replaces), array_values($replaces), $format);
+			echo strtr($format, $replaces);
 		}
 
 		# On verifie qu'il y a des categories
 		if($this->plxMotor->aCats) {
 			$includeCats = (!empty(trim($include))) ? explode(',', $include) : false;
 			$excludeCats = (!empty(trim($exclude))) ? explode(',', $exclude) : false;
-			foreach($this->plxMotor->aCats as $cat=>$v) {
+			foreach($this->plxMotor->aCats as $catId=>$infos) {
 				if(
-					!empty($v['active']) and
-					$v['menu'] == 'oui' and
-					($v['articles'] > 0 or $this->plxMotor->aConf['display_empty_cat']) and
-					(empty($includeCats) or in_array($cat, $includeCats)) and
-					(empty($excludeCats) or !in_array($cat, $excludeCats))
+					!empty($infos['active']) and
+					$infos['menu'] == 'oui' and
+					($infos['articles'] > 0 or $this->plxMotor->aConf['display_empty_cat']) and
+					(empty($includeCats) or in_array($catId, $includeCats)) and
+					(empty($excludeCats) or !in_array($catId, $excludeCats))
 				) {
-					$intCat = intval($cat);
+					$catIdNum = intval($catId);
 					$replaces = array(
-						'#cat_id'			=> "cat-$intCat",
-						'#cat_url'			=> $this->plxMotor->urlRewrite("?categorie{$intCat}/{$v['url']}"),
-						'#cat_name'			=> plxUtils::strCheck($v['name']),
-						'#cat_status'		=> ($this->catId() == $intCat) ? 'active' : 'noactive',
-						'#cat_description'	=> plxUtils::strCheck($v['description']),
-						'#art_nb'			=> $v['articles']
+						'#cat_id'			=> "cat-$catIdNum",
+						'#cat_url'			=> $this->plxMotor->urlRewrite("?categorie{$catIdNum}/{$infos['url']}"),
+						'#cat_name'			=> plxUtils::strCheck($infos['name']),
+						'#cat_status'		=> ($this->catId() == $catIdNum) ? 'active' : 'noactive',
+						'#cat_description'	=> plxUtils::strCheck($infos['description']),
+						'#art_nb'			=> $infos['articles']
 					);
-					echo str_replace(array_keys($replaces), array_values($replaces), $format);
+					echo strtr($format, $replaces);
 				}
 			}
 		}
@@ -574,27 +564,17 @@ FMT3;
 				$img_thumb_url = $img_url;
 				$img_size = getimagesize(PLX_ROOT.$img_url);
 			}
-			$result = str_replace(
-				array(
-					'#img_url',
-					'#img_thumb_url',
-					'#img_title',
-					'#img_alt',
-					'#img_size'
-				),
-				array(
-					$img_url, // #img_url
-					$img_thumb_url, // #img_thumb_url
-					plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('thumbnail_title')), // #img_title
-					$this->plxMotor->plxRecord_arts->f('thumbnail_alt'), // #img_alt
-					$img_size[3]
-				),
-				$format
+			$replaces = array(
+				'#img_url'			=> $img_url,
+				'#img_thumb_url'	=> $img_thumb_url,
+				'#img_title'		=> plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('thumbnail_title')),
+				'#img_alt'			=> $this->plxMotor->plxRecord_arts->f('thumbnail_alt'),
+				'#img_size'			=> $img_size[3]
 			);
 			if($echo)
-				echo $result;
+				echo strtr($format, $replaces);
 			else
-				return $result;
+				return strtr($format, $replaces);
 		} elseif(!$echo) {
 			return false;
 		}
@@ -647,9 +627,10 @@ FMT3;
 
 		$infos = plxUtils::getValue($this->plxMotor->aUsers[$this->plxMotor->plxRecord_arts->f('author')]['infos']);
 		if(trim($infos)!='') {
-			$txt = str_replace('#art_authorinfos', $infos, $format);
-			$txt = str_replace('#art_author', $this->artAuthor(false), $txt);
-			echo $txt;
+			echo strtr($format, array(
+				'#art_authorinfos'	=> $infos,
+				'#art_author'		=> $this->artAuthor(false)
+			));
 		}
 	}
 
@@ -741,24 +722,28 @@ FMT3;
 	 * @scope	home,categorie,article,tags,archives
 	 * @author	Stephane F
 	 **/
-	public function artTags($format='<a class="#tag_status" href="#tag_url" title="#tag_name">#tag_name</a>', $separator=',') {
+	public function artTags($format='<a class="#tag_status" href="#tag_url" title="#tag_name">#tag_name</a>', $separator=', ') {
 		# Hook Plugins
-		if(eval($this->plxMotor->plxPlugins->callHook('plxShowArtTags'))) return;
+		if(eval($this->plxMotor->plxPlugins->callHook('plxShowArtTags'))) { return; }
 
 		# Initialisation de notre variable interne
 		$taglist = $this->plxMotor->plxRecord_arts->f('tags');
 		if(!empty($taglist)) {
-			$tags = array_map('trim', explode(',', $taglist));
-			foreach($tags as $idx => $tag) {
+			$prefix = '';
+			foreach(array_map('trim', explode(',', $taglist)) as $tag) {
 				$t = plxUtils::title2url($tag);
-				$name = str_replace('#tag_url',$this->plxMotor->urlRewrite('?tag/'.$t),$format);
-				$name = str_replace('#tag_name',plxUtils::strCheck($tag),$name);
-				$name = str_replace('#tag_status',(($this->plxMotor->mode=='tags' AND $this->plxMotor->cible==$t)?'active':'noactive'), $name);
-				echo $name;
-				if ($idx!=sizeof($tags)-1) echo $separator.' ';
+				$status = ($this->plxMotor->mode == 'tags' AND $this->plxMotor->cible == $t);
+				echo $prefix.strtr($format, array(
+					'#tag_url'		=> $this->plxMotor->urlRewrite('?tag/'.$t),
+					'#tag_name'		=> plxUtils::strCheck($tag),
+					'#tag_status'	=> ($status) ? 'active' : 'noactive'
+				));
+				if(empty($prefix) and !empty($separator)) { $prefix = $separator; }
 			}
+			return;
 		}
-		else echo L_ARTTAGS_NONE;
+
+		echo L_ARTTAGS_NONE;
 	}
 
 	/**
@@ -772,19 +757,15 @@ FMT3;
 	public function artReadMore($format='') {
 
 		# Affichage du lien "Lire la suite" si un chapo existe
-		if($this->plxMotor->plxRecord_arts->f('chapo') != '') {
-			$format = ($format=='' ? '<p class="more"><a href="#art_url" title="#art_title">'.L_ARTCHAPO.'</a></p>' : $format);
-			if($format) {
-				# On recupere les infos de l'article
-				$id = intval($this->plxMotor->plxRecord_arts->f('numero'));
-				$title = plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('title'));
-				$url = $this->plxMotor->plxRecord_arts->f('url');
-				# Formatage de l'affichage
-				$row = str_replace("#art_url", $this->plxMotor->urlRewrite('?article'.$id.'/'.$url), $format);
-				$row = str_replace("#art_title", $title, $row);
-				echo $row;
-			}
-		}
+		if(empty($this->plxMotor->plxRecord_arts->f('chapo'))) { return; }
+
+		if(empty($format)) { $format = '<p class="more"><a href="#art_url" title="#art_title">'.L_ARTCHAPO.'</a></p>'; }
+		$id = intval($this->plxMotor->plxRecord_arts->f('numero'));
+		$url = $this->plxMotor->plxRecord_arts->f('url');
+		echo strtr($format, array(
+			'#art_url'		=> $this->plxMotor->urlRewrite('?article'.$id.'/'.$url),
+			'#art_title'	=> plxUtils::strCheck($this->plxMotor->plxRecord_arts->f('title'))
+		));
 	}
 
 	/**
@@ -904,19 +885,20 @@ FMT3;
 		$num = intval($this->plxMotor->plxRecord_arts->f('numero'));
 		$url = $this->plxMotor->plxRecord_arts->f('url');
 
-		if($nb==0) {
-			$txt = str_replace('L_NO_COMMENT', L_NO_COMMENT, $f1);
-			$title = $nb.' '.L_NO_COMMENT;
+		switch($nb) {
+			case 0:
+				$txt = str_replace('L_NO_COMMENT', L_NO_COMMENT, $f1);
+				$title = $nb.' '.L_NO_COMMENT;
+				break;
+			case 1:
+				$txt = str_replace('L_COMMENT', L_COMMENT, $f2);
+				$title = $nb.' '.L_COMMENT;
+				break;
+			default:
+				$txt = str_replace('L_COMMENTS', L_COMMENTS, $f3);
+				$title = $nb.' '.L_COMMENTS;
 		}
-		elseif($nb==1) {
-			$txt = str_replace('L_COMMENT', L_COMMENT, $f2);
-			$title = $nb.' '.L_COMMENT;
-		}
-		else {
-			$txt = str_replace('L_COMMENTS', L_COMMENTS, $f3);
-			$title = $nb.' '.L_COMMENTS;
-		}
-		$txt = str_replace('#nb',$nb,$txt);
+		$txt = str_replace('#nb', $nb, $txt);
 
 		if($this->plxMotor->mode == 'article')
 			echo $txt;
@@ -938,17 +920,20 @@ FMT3;
 	public function nbAllArt($f1='L_NO_ARTICLE',$f2='#nb L_ARTICLE',$f3='#nb L_ARTICLES') {
 
 		$nb = $this->plxMotor->nbArticles('published', '[0-9]{3}', '', 'before');
-
-		if($nb==0)
-			$txt = str_replace('L_NO_ARTICLE', L_NO_ARTICLE, $f1);
-		elseif($nb==1)
-			$txt = str_replace('L_ARTICLE', L_ARTICLE, $f2);
-		else
-			$txt = str_replace('L_ARTICLES', L_ARTICLES, $f3);
-
-		$txt = str_replace('#nb',$nb,$txt);
-
-		echo $txt;
+		switch($nb) {
+			case 0:
+				$txt = str_replace('L_NO_COMMENT', L_NO_COMMENT, $f1);
+				$title = $nb.' '.L_NO_COMMENT;
+				break;
+			case 1:
+				$txt = str_replace('L_COMMENT', L_COMMENT, $f2);
+				$title = $nb.' '.L_COMMENT;
+				break;
+			default:
+				$txt = str_replace('L_COMMENTS', L_COMMENTS, $f3);
+				$title = $nb.' '.L_COMMENTS;
+		}
+		echo str_replace('#nb', $nb, $txt);
 	}
 
 	/**
@@ -979,51 +964,49 @@ FMT3;
 				$art = $this->plxMotor->parseArticle(PLX_ROOT.$this->plxMotor->aConf['racine_articles'].$v);
 				$num = intval($art['numero']);
 				$date = $art['date'];
-				if(($this->plxMotor->mode == 'article') AND ($art['numero'] == $this->plxMotor->cible))
-					$status = 'active';
-				else
-					$status = 'noactive';
+				$status = (($this->plxMotor->mode == 'article') AND ($art['numero'] == $this->plxMotor->cible)) ? 'active' : 'noactive';
+
 				# Mise en forme de la liste des catégories
 				$catList = array();
-				$catIds = explode(',', $art['categorie']);
-				foreach ($catIds as $idx => $catId) {
+				foreach (explode(',', $art['categorie']) as $catId) {
 					if(isset($this->plxMotor->aCats[$catId])) { # La catégorie existe
 						$catName = plxUtils::strCheck($this->plxMotor->aCats[$catId]['name']);
 						$catUrl = $this->plxMotor->aCats[$catId]['url'];
 						$catList[] = '<a title="'.$catName.'" href="'.$this->plxMotor->urlRewrite('?categorie'.intval($catId).'/'.$catUrl).'">'.$catName.'</a>';
-					} else {
-						$catList[] = L_UNCLASSIFIED;
 					}
 				}
-				# On modifie nos motifs
-				$row = str_replace('#art_id',$num,$format);
-				$row = str_replace('#cat_list', implode(', ',$catList),$row);
-				$row = str_replace('#art_url',$this->plxMotor->urlRewrite('?article'.$num.'/'.$art['url']),$row);
-				$row = str_replace('#art_status',$status,$row);
+				if(count($catList) == 0) { $catList[] = L_UNCLASSIFIED; }
+
 				$author = plxUtils::getValue($this->plxMotor->aUsers[$art['author']]['name']);
-				$row = str_replace('#art_author',plxUtils::strCheck($author),$row);
-				$row = str_replace('#art_title',plxUtils::strCheck($art['title']),$row);
-				$strlength = preg_match('/#art_chapo\(([0-9]+)\)/',$row,$capture) ? $capture[1] : '100';
-				$chapo = plxUtils::truncate($art['chapo'],$strlength,$ending,true,true);
-				$row = str_replace('#art_chapo('.$strlength.')','#art_chapo',$row);
-				$row = str_replace('#art_chapo',$chapo,$row);
-				$strlength = preg_match('/#art_content\(([0-9]+)\)/',$row,$capture) ? $capture[1] : '100';
-				$content = plxUtils::truncate($art['content'],$strlength,$ending,true,true);
-				$row = str_replace('#art_content('.$strlength.')','#art_content',$row);
-				$row = str_replace('#art_content',$content,$row);
-				$row = str_replace('#art_date',plxDate::formatDate($date,'#num_day/#num_month/#num_year(4)'),$row);
-				$row = str_replace('#art_hour',plxDate::formatDate($date,'#hour:#minute'),$row);
-				$row = str_replace('#art_time',plxDate::formatDate($date,'#time'),$row);
-				$row = plxDate::formatDate($date,$row);
-				$row = str_replace('#art_nbcoms',$art['nb_com'],$row);
-				$row = str_replace('#art_thumbnail', '<img class="art_thumbnail" src="#img_url" alt="#img_alt" title="#img_title" />',$row);
-				$row = str_replace('#img_url',$this->plxMotor->urlRewrite($art['thumbnail']),$row);
-				$row = str_replace('#img_title',$art['thumbnail_title'],$row);
-				$row = str_replace('#img_alt',$art['thumbnail_alt'],$row);
+				$chapoLength = preg_match('/#art_chapo\((\d+)\)/', $format, $capture) ? $capture[1] : '100';
+				$chapo = plxUtils::truncate($art['chapo'], $chapoLength, $ending, true, true);
+				$contentLength = preg_match('/#art_content\((\d+)\)/', $format, $capture) ? $capture[1] : '100';
+				$content = plxUtils::truncate($art['content'], $contentLength, $ending, true, true);
+				$replaces = array(
+					'#art_id'			=> $num,
+					'#cat_list'			=> implode(', ', $catList),
+					'#art_url'			=> $this->plxMotor->urlRewrite('?article'.$num.'/'.$art['url']),
+					'#art_status'		=> $status,
+					'#art_author'		=> plxUtils::strCheck($author),
+					'#art_title'		=> plxUtils::strCheck($art['title']),
+					'#art_chapo('.$chapoLength.')'		=> '#art_chapo',
+					'#art_chapo'		=> $chapo,
+					'#art_content('.$contentLength.')'	=> '#art_content',
+					'#art_content'		=> $content,
+					'#art_date'			=> plxDate::formatDate($date,'#num_day/#num_month/#num_year(4)'),
+					'#art_hour'			=> plxDate::formatDate($date,'#hour:#minute'),
+					'#art_time'			=> plxDate::formatDate($date,'#time'),
+					// $row = plxDate::formatDate($date,$row);
+					'#art_nbcoms'		=> $art['nb_com'],
+					'#art_thumbnail'	=> '<img class="art_thumbnail" src="#img_url" alt="#img_alt" title="#img_title" />',
+					'#img_url'			=> $this->plxMotor->urlRewrite($art['thumbnail']),
+					'#img_title'		=> $art['thumbnail_title'],
+					'#img_alt'			=> $art['thumbnail_alt']
+				);
 				# Hook plugin
 				eval($this->plxMotor->plxPlugins->callHook('plxShowLastArtListContent'));
 				# On genère notre ligne
-				echo $row;
+				echo strtr($format, $replaces);
 			}
 		}
 	}
@@ -1111,17 +1094,20 @@ FMT3;
 	public function nbAllCom($f1='L_NO_COMMENT',$f2='#nb L_COMMENT',$f3='#nb L_COMMENTS') {
 
 		$nb = $this->plxMotor->nbComments('online', 'before');
-
-		if($nb==0)
-			$txt = str_replace('L_NO_COMMENT', L_NO_COMMENT, $f1);
-		elseif($nb==1)
-			$txt = str_replace('L_COMMENT', L_COMMENT, $f2);
-		else
-			$txt = str_replace('L_COMMENTS', L_COMMENTS, $f3);
-
-		$txt = str_replace('#nb',$nb,$txt);
-
-		echo $txt;
+		switch($nb) {
+			case 0:
+				$txt = str_replace('L_NO_COMMENT', L_NO_COMMENT, $f1);
+				$title = $nb.' '.L_NO_COMMENT;
+				break;
+			case 1:
+				$txt = str_replace('L_COMMENT', L_COMMENT, $f2);
+				$title = $nb.' '.L_COMMENT;
+				break;
+			default:
+				$txt = str_replace('L_COMMENTS', L_COMMENTS, $f3);
+				$title = $nb.' '.L_COMMENTS;
+		}
+		echo str_replace('#nb', $nb, $txt);
 	}
 
 	/**
@@ -1202,9 +1188,10 @@ FMT3;
 				default:
 					$color = 'red';
 			}
-			$row = str_replace('#com_message', $_SESSION['msgcom'], $format);
-			$row = str_replace('#com_class', 'alert '.$color, $row);
-			echo $row;
+			echo strtr($format, array(
+				'#com_message'	=> $_SESSION['msgcom'],
+				'#com_class'	=> 'alert '.$color
+			));
 			unset($_SESSION['msgcom']);
 			return true;
 		}
@@ -1262,24 +1249,23 @@ FMT3;
 	 * @scope	global
 	 * @author	Florent MONTHEL, Stephane F
 	 **/
-	public function lastComList($format='<li><a href="#com_url">#com_author L_SAID :</a><br/>#com_content(50)</li>',$max=5,$art_id='',$cat_ids='') {
+	public function lastComList(
+		$format='<li><a href="#com_url">#com_author L_SAID :</a><br/>#com_content(50)</li>',
+		$max=5, $art_id='', $cat_ids=''
+	) {
 
 		# Hook Plugins
 		if(eval($this->plxMotor->plxPlugins->callHook('plxShowLastComList'))) return;
 
 		# Génération de notre motif
-		if(empty($art_id))
-			$motif = '/^[0-9]{4}.[0-9]{10}-[0-9]+.xml$/';
-		else
-			$motif = '/^'.str_pad($art_id,4,'0',STR_PAD_LEFT).'.[0-9]{10}-[0-9]+.xml$/';
-
-		$count=1;
-		$datetime=date('YmdHi');
+		$motifArts = (!empty($art_id)) ? str_pad($art_id, 4, '0', STR_PAD_LEFT) : '\d{4}';
+		$motif = '/^'.$motifArts.'\.[0-9]{10}-[0-9]+\.xml$/';
 		# Nouvel objet plxGlob et récupération des fichiers
 		$plxGlob_coms = clone $this->plxMotor->plxGlob_coms;
-		if($aFiles = $plxGlob_coms->query($motif,'com','rsort',0,false,'before')) {
+		if($aFiles = $plxGlob_coms->query($motif, 'com', 'rsort', 0, false,'before')) {
+			$datetime=date('YmdHi');
 			$aComArtTitles = array(); # tableau contenant les titres des articles
-			$isComArtTitle = (strpos($format, '#com_art_title')!=FALSE) ? true : false;
+			$isComArtTitle = (strpos($format, '#com_art_title') !== false);
 			# On parcourt les fichiers des commentaires
 			foreach($aFiles as $v) {
 				# On filtre si le commentaire appartient à un article d'une catégorie inactive
@@ -1290,42 +1276,45 @@ FMT3;
 						if(empty($cat_ids) OR preg_match('/('.$cat_ids.')/', $artInfo['catId'])) {
 							$url = '?article'.intval($com['article']).'/'.$artInfo['artUrl'].'#c'.$com['article'].'-'.$com['index'];
 							$date = $com['date'];
-							$content = strip_tags($com['content']);
 							# On modifie nos motifs
-							$row = str_replace('L_SAID', L_SAID, $format);
-							$row = str_replace('#com_id',$com['index'],$row);
-							$row = str_replace('#com_url',$this->plxMotor->urlRewrite($url),$row);
-							$row = str_replace('#com_author',$com['author'],$row);
-							while(preg_match('/#com_content\(([0-9]+)\)/',$row,$capture)) {
-								if($com['author'] == 'admin')
-									$row = str_replace('#com_content('.$capture[1].')',plxUtils::strCut($content,$capture[1]),$row);
-								else
-									$row = str_replace('#com_content('.$capture[1].')',plxUtils::strCheck(plxUtils::strCut(plxUtils::strRevCheck($content),$capture[1])),$row);
-							}
-							$row = str_replace('#com_content',$content,$row);
-							$row = str_replace('#com_date',plxDate::formatDate($date,'#num_day/#num_month/#num_year(4)'),$row);
-							$row = str_replace('#com_hour',plxDate::formatDate($date,'#time'),$row);
-							$row = plxDate::formatDate($date,$row);
+							$replaces = array(
+								'L_SAID'			=> L_SAID,
+								'#com_id'			=> $com['index'],
+								'#com_url'			=> $this->plxMotor->urlRewrite($url),
+								'#com_author'		=> $com['author'],
+								'#com_date'			=> plxDate::formatDate($date,'#num_day/#num_month/#num_year(4)'),
+								'#com_hour'			=> plxDate::formatDate($date,'#time'),
+							);
+							// $row = plxDate::formatDate($date,$row);
 							# récupération du titre de l'article
+							$content = strip_tags($com['content']);
+							if(preg_match('/#com_content\((\d+)\)/', $format, $capture)) {
+								$lg = $capture[1];
+								$replaces['#com_content('.$lg.')'] = ($com['author'] == 'admin') ?
+									plxUtils::strCut($content, $lg) :
+									plxUtils::strCheck(plxUtils::strCut(plxUtils::strRevCheck($content), $lg));
+							} else {
+								$replaces['#com_content'] = $content;
+							}
 							if($isComArtTitle) {
 								if(isset($aComArtTitles[$com['article']])) {
-									$row = str_replace('#com_art_title',$aComArtTitles[$com['article']],$row);
+									$replaces['#com_art_title'] = $aComArtTitles[$com['article']];
 								}
 								else {
 									if($file = $this->plxMotor->plxGlob_arts->query('/^'.$com['article'].'.(.*).xml$/')) {
 										$art = $this->plxMotor->parseArticle(PLX_ROOT.$this->plxMotor->aConf['racine_articles'].$file[0]);
 										$aComArtTitles[$com['article']] = $art_title = $art['title'];
-										$row = str_replace('#com_art_title',$art_title,$row);
+										$replaces['#com_art_title'] = $art_title;
 									}
 								}
 							}
 							# On genère notre ligne
-							echo $row;
-							$count++;
+							echo strtr($format, $replaces);
+							$max--;
 						}
 					}
 				}
-				if($count>$max) break;
+				if($max <= 0) break;
 			}
 		}
 	}
@@ -1362,14 +1351,16 @@ FMT3;
 
 		# Si on a la variable extra, on affiche un lien vers la page d'accueil (avec $extra comme nom)
 		if(!empty(trim($extra))) {
-			$replaces = array(
-				'#static_id'		=> 'static-home',
-				'#static_class'		=> 'static menu',
-				'#static_url'		=> $this->plxMotor->urlRewrite(),
-				'#static_name'		=> plxUtils::strCheck(trim($extra)),
-				'#static_status'	=> ($home == true) ? 'active' : 'noactive'
+			$menus[] = strtr(
+				$format,
+				array(
+					'#static_class'		=> 'static menu',
+					'#static_id'		=> 'static-home',
+					'#static_name'		=> plxUtils::strCheck(trim($extra)),
+					'#static_status'	=> ($home == true) ? 'active' : 'noactive',
+					'#static_url'		=> $this->plxMotor->urlRewrite()
+				)
 			);
-			$menus[] = str_replace(array_keys($replaces), array_values($replaces), $format);
 		}
 
 		# Affiche les pages statiques, avec un sous-menu si groupe
@@ -1386,20 +1377,22 @@ FMT3;
 						$url = $this->plxMotor->urlRewrite("?static${numPage}/${v['url']}");
 
 					$active = ($this->staticId() == $numPage);
-					$replaces = array(
-						'#static_id'		=> "static-${numPage}",
-						'#static_class'		=> 'static menu',
-						'#static_url'		=> $url,
-						'#static_name'		=> plxUtils::strCheck($v['name']),
-						'#static_status'	=> ($active) ? 'active' : 'noactive'
+					$entry = strtr(
+						$format,
+						array(
+							'#static_class'		=> 'static menu',
+							'#static_id'		=> "static-${numPage}",
+							'#static_name'		=> plxUtils::strCheck($v['name']),
+							'#static_status'	=> ($active) ? 'active' : 'noactive',
+							'#static_url'		=> $url
+						)
 					);
-
 					$group = trim($v['group']);
 					if(empty($group))
-						$menus[] = str_replace(array_keys($replaces), array_values($replaces), $format);
+						$menus[] = $entry;
 					else {
 						if(!array_key_exists($group, $menus)) { $menus[$group] = array(); }
-						$menus[$group][] = str_replace(array_keys($replaces), array_values($replaces), "\t\t${format}");
+						$menus[$group][] = $entry;
 						if(
 							empty($group_active) AND
 							empty($home) AND
@@ -1423,24 +1416,25 @@ FMT3;
 					$this->plxMotor->get and
 					preg_match('/(blog|categorie|archives|tag|article)/', $_SERVER['QUERY_STRING'].$this->plxMotor->mode)
 				) ? 'active' : 'noactive';
-				$replaces = array(
-					'#static_id'		=> 'static-blog',
-					'#static_class'		=> 'static menu',
-					'#static_url'		=> $this->plxMotor->urlRewrite('?blog'),
-					'#static_name'		=> ucfirst(L_PAGEBLOG_TITLE),
-					'#static_status'	=> $status
+				$entry = strtr(
+					$format,
+					array(
+						'#static_class'		=> 'static menu',
+						'#static_id'		=> 'static-blog',
+						'#static_name'		=> ucfirst(L_PAGEBLOG_TITLE),
+						'#static_status'	=> $status,
+						'#static_url'		=> $this->plxMotor->urlRewrite('?blog')
+					)
 				);
 				if($menublog > 0) {
 					array_splice(
 						$menus,
 						$menublog-1,
 						0,
-						array(
-							str_replace(array_keys($replaces), array_values($replaces), $format)
-						)
+						array($entry)
 					);
 				} else {
-					$menus[] = str_replace(array_keys($replaces), array_values($replaces), $format);
+					$menus[] = $entry;
 				}
 			}
 		}
@@ -1458,16 +1452,18 @@ FMT3;
 				if($status and $this->plxMotor->mode === 'categorie') {
 					$group_active = ucfirst(L_CATEGORIES);
 				}
-				$replaces = array(
-					'#cat_id'		=> "static-cat-${idNum}",
-					'#cat_class'	=> 'static menu',
-					'#cat_url'		=> $this->plxMotor->urlRewrite("?categorie${idNum}/${catInfos['url']}"),
-					'#cat_name'		=> plxUtils::strCheck($catInfos['name']),
-					'#cat_nb'		=> $catInfos['articles'],
-					'#cat_title'	=> plxUtils::strCheck($catInfos['description']),
-					'#cat_status'	=> ($status) ? 'active' : 'noactive'
+				$catsMenu[] = strtr(
+					$format_cat,
+					array(
+						'#cat_class'	=> 'static menu',
+						'#cat_id'		=> "static-cat-${idNum}",
+						'#cat_name'		=> plxUtils::strCheck($catInfos['name']),
+						'#cat_nb'		=> $catInfos['articles'],
+						'#cat_status'	=> ($status) ? 'active' : 'noactive',
+						'#cat_title'	=> plxUtils::strCheck($catInfos['description']),
+						'#cat_url'		=> $this->plxMotor->urlRewrite("?categorie${idNum}/${catInfos['url']}")
+					)
 				);
-				$catsMenu[] = str_replace(array_keys($replaces), array_values($replaces), $format_cat);
 			}
 			if(!is_numeric($pos_cat)) {
 				$pos_cat = (!empty(trim($extra))) ? 1 : 0;
@@ -1499,13 +1495,15 @@ FMT3;
 					echo $v;
 				}
 				elseif(is_array($v)) {
-					$replaces = array(
-						'#group_id'		=> 'static-group-'.plxUtils::title2url($k),
-						'#group_class'	=> 'static group',
-						'#group_name'	=> plxUtils::strCheck($k),
-						'#group_status'	=> ($group_active === $k) ? 'active' : 'noactive'
+					$caption = strtr(
+						$format_group,
+						array(
+							'#group_class'	=> 'static group',
+							'#group_id'		=> 'static-group-'.plxUtils::title2url($k),
+							'#group_name'	=> plxUtils::strCheck($k),
+							'#group_status'	=> ($group_active === $k) ? 'active' : 'noactive'
+						)
 					);
-					$caption = str_replace(array_keys($replaces), array_values($replaces), $format_group);
 					$options_menu = implode('', array_values($v));
 					$id = plxUtils::title2url($k);
 					echo <<< SOUS_MENU
@@ -1930,7 +1928,7 @@ SOUS_MENU;
 					'#tag_name'		=> plxUtils::strCheck($tag),
 					'#tag_status'	=> $status
 				);
-				echo str_replace(array_keys($replaces), array_values($replaces), $format);
+				echo strtr($format, $replaces);
 			}
 		}
 	}
@@ -2013,7 +2011,7 @@ SOUS_MENU;
 					'#archives_status'	=> (($active) ? 'active' : 'noactive'),
 					'#archives_selected'=> (($active) ? 'selected' : '')
 				);
-				echo str_replace(array_keys($motifs), array_values($motifs), $format);
+				echo strtr($format, $motifs);
 			}
 
 			# Affichage annuel
@@ -2031,7 +2029,7 @@ SOUS_MENU;
 					'#archives_status'	=> ($active) ? 'active' : 'noactive',
 					'#archives_selected'=> ($active) ? 'selected' : ''
 				);
-				echo str_replace(array_keys($motifs), array_values($motifs), $format);
+				echo strtr($format, $motifs);
 			}
 
 			# Total des articles
@@ -2046,7 +2044,7 @@ SOUS_MENU;
 					'#archives_status'	=> ($active) ? 'active' : 'noactive',
 					'#archives_selected'=> ($active) ? 'selected' : ''
 				);
-				echo str_replace(array_keys($motifs), array_values($motifs), $format);
+				echo strtr($format, $motifs);
 			}
 		}
 	}
@@ -2063,19 +2061,23 @@ SOUS_MENU;
 		# Hook Plugins
 		if(eval($this->plxMotor->plxPlugins->callHook('plxShowPageBlog'))) return;
 
-		if($this->plxMotor->aConf['homestatic']!='' AND isset($this->plxMotor->aStats[$this->plxMotor->aConf['homestatic']])) {
-			if($this->plxMotor->aStats[$this->plxMotor->aConf['homestatic']]['active']) {
-				$name = str_replace('#page_id','static-blog',$format);
-				if ($this->plxMotor->get AND preg_match('/(blog|categorie|archives|tag|article)/', $_SERVER['QUERY_STRING'].$this->plxMotor->mode)) {
-					$name = str_replace('#page_status','active',$name);
-				} else {
-					$name = str_replace('#page_status','noactive',$name);
-				}
-				$name = str_replace('#page_class','static menu',$name);
-				$name = str_replace('#page_url', $this->plxMotor->urlRewrite('?blog'),$name);
-				$name = str_replace('#page_name',L_PAGEBLOG_TITLE,$name);
-				echo $name;
-			}
+		if(
+			$this->plxMotor->aConf['homestatic'] != '' and
+			isset($this->plxMotor->aStats[$this->plxMotor->aConf['homestatic']]) and
+			$this->plxMotor->aStats[$this->plxMotor->aConf['homestatic']]['active']
+		) {
+			$status = (
+				$this->plxMotor->get and
+				preg_match('/(blog|categorie|archives|tag|article)/', $_SERVER['QUERY_STRING'].$this->plxMotor->mode)
+			);
+			$replaces = array(
+				'#page_id'		=> 'static-blog',
+				'#page_status'	=> ($status) ? 'active' : 'noactive',
+				'#page_class'	=> 'static menu',
+				'#page_url'		=> $this->plxMotor->urlRewrite('?blog'),
+				'#page_name'	=> L_PAGEBLOG_TITLE
+			);
+			echo strtr($format, $replaces);
 		}
 	}
 
