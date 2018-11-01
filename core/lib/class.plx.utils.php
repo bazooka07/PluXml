@@ -247,15 +247,17 @@ class plxUtils {
 	public static function testWrite($file, $format="<li><span style=\"color:#color\">#symbol #message</span></li>\n") {
 
 		if(is_writable($file)) {
-			$output = str_replace('#color', 'green', $format);
-			$output = str_replace('#symbol', '&#10004;', $output);
-			$output = str_replace('#message', sprintf(L_WRITE_ACCESS, $file), $output);
-			echo $output;
+			echo strtr($format, array(
+				'#color'	=> 'green',
+				'#symbol'	=> '&#10004;',
+				'#message'	=> sprintf(L_WRITE_ACCESS, $file)
+			));
 		} else {
-			$output = str_replace('#color', 'red', $format);
-			$output = str_replace('#symbol', '&#10007;', $output);
-			$output = str_replace('#message', sprintf(L_WRITE_NOT_ACCESS, $file), $output);
-			echo $output;
+			echo strtr($format, array(
+				'#color'	=> 'red',
+				'#symbol'	=> '&#10007;',
+				'#message'	=> sprintf(L_WRITE_NOT_ACCESS, $file)
+			));
 		}
 	}
 
@@ -273,20 +275,22 @@ class plxUtils {
 			$test = in_array("mod_rewrite", apache_get_modules());
 			if($io==true) {
 				if($test) {
-					$output = str_replace('#color', 'green', $format);
-					$output = str_replace('#symbol', '&#10004;', $output);
-					$output = str_replace('#message', L_MODREWRITE_AVAILABLE, $output);
-					echo $output;
+					echo strtr($format, array(
+						'#color'	=> 'green',
+						'#symbol'	=> '&#10004;',
+						'#message'	=> L_MODREWRITE_AVAILABLE
+					));
 				} else {
-					$output = str_replace('#color', 'red', $format);
-					$output = str_replace('#symbol', '&#10007;', $output);
-					$output = str_replace('#message', L_MODREWRITE_NOT_AVAILABLE, $output);
-					echo $output;
+					echo strtr($format, array(
+						'#color'	=> 'red',
+						'#symbol'	=> '&#10007;',
+						'#message'	=> L_MODREWRITE_NOT_AVAILABLE
+					));
 				}
 			}
 			return $test;
 		}
-		else return true;
+		return true;
 	}
 
 	/**
@@ -301,17 +305,19 @@ class plxUtils {
 
 		if($return=function_exists('mail')) {
 			if($io==true) {
-				$output = str_replace('#color', 'green', $format);
-				$output = str_replace('#symbol', '&#10004;', $output);
-				$output = str_replace('#message', L_MAIL_AVAILABLE, $output);
-				echo $output;
+				echo strtr($format, array(
+					'#color'	=> 'green',
+					'#symbol'	=> '&#10004;',
+					'#message'	=> L_MAIL_AVAILABLE
+				));
 			}
 		} else {
 			if($io==true) {
-				$output = str_replace('#color', 'red', $format);
-				$output = str_replace('#symbol', '&#10007;', $output);
-				$output = str_replace('#message', L_MAIL_NOT_AVAILABLE, $output);
-				echo $output;
+				echo strtr($format, array(
+					'#color'	=> 'red',
+					'#symbol'	=> '&#10007;',
+					'#message'	=> L_MAIL_NOT_AVAILABLE
+				));
 			}
 		}
 		return $return;
@@ -326,15 +332,17 @@ class plxUtils {
 	public static function testLibGD($format="<li><span style=\"color:#color\">#symbol #message</span></li>\n") {
 
 		if(function_exists('imagecreatetruecolor')) {
-			$output = str_replace('#color', 'green', $format);
-			$output = str_replace('#symbol', '&#10004;', $output);
-			$output = str_replace('#message', L_LIBGD_INSTALLED, $output);
-			echo $output;
+			echo strtr($format, array(
+				'#color'	=> 'green',
+				'#symbol'	=> '&#10004;',
+				'#message'	=> L_LIBGD_INSTALLED
+			));
 		} else {
-			$output = str_replace('#color', 'red', $format);
-			$output = str_replace('#symbol', '&#10007;', $output);
-			$output = str_replace('#message', L_LIBGD_NOT_INSTALLED, $output);
-			echo $output;
+			echo strtr($format, array(
+				'#color'	=> 'red',
+				'#symbol'	=> '&#10007;',
+				'#message'	=> L_LIBGD_NOT_INSTALLED
+			));
 		}
 	}
 
@@ -347,15 +355,17 @@ class plxUtils {
 	public static function testLibXml($format="<li><span style=\"color:#color\">#symbol #message</span></li>\n") {
 
 		if(function_exists('xml_parser_create')) {
-			$output = str_replace('#color', 'green', $format);
-			$output = str_replace('#symbol', '&#10004;', $output);
-			$output = str_replace('#message', L_LIBXML_INSTALLED, $output);
-			echo $output;
+			echo strtr($format, array(
+				'#color'	=> 'green',
+				'#symbol'	=> '&#10004;',
+				'#message'	=> L_LIBXML_INSTALLED
+			));
 		} else {
-			$output = str_replace('#color', 'red', $format);
-			$output = str_replace('#symbol', '&#10007;', $output);
-			$output = str_replace('#message', L_LIBXML_NOT_INSTALLED, $output);
-			echo $output;
+			echo strtr($format, array(
+				'#color'	=> 'red',
+				'#symbol'	=> '&#10007;',
+				'#message'	=> L_LIBXML_NOT_INSTALLED
+			));
 		}
 	}
 

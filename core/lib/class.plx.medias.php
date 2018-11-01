@@ -49,24 +49,35 @@ class plxMedias {
 		$this->aDirs = $this->_getAllDirs($this->path);
 		$this->aFiles = $this->_getDirFiles($this->dir);
 
+		$units = array(
+			'G'	=> 'Go',
+			'M'	=> 'Mo',
+			'K'	=> 'Ko'
+		);
+		$bases = array(
+			'G'	=> 1024 * 1024 * 1024,
+			'M'	=> 1024 * 1024,
+			'K'	=> 1024,
+		);
+		$pattern = '@\s*(\d)\s*(M|K|G)?$@';
 		# Taille maxi des fichiers
 		$maxUpload = strtoupper(ini_get("upload_max_filesize"));
-		$this->maxUpload['display'] = str_replace('M', ' Mo', $maxUpload);
-		$this->maxUpload['display'] = str_replace('K', ' Ko', $this->maxUpload['display']);
-		if(substr_count($maxUpload, 'K')) $this->maxUpload['value'] = str_replace('K', '', $maxUpload) * 1024;
-		elseif(substr_count($maxUpload, 'M')) $this->maxUpload['value'] = str_replace('M', '', $maxUpload) * 1024 * 1024;
-		elseif(substr_count($maxUpload, 'G')) $this->maxUpload['value'] = str_replace('G', '', $maxUpload) * 1024 * 1024 * 1024;
-		else $this->maxUpload['value'] = 0;
+		$this->maxUpload['display'] = strtr($maxUpload, $units);
+		if(preg_match($pattern, $maxUpload, $matches)) {
+			$this->maxUpload['value'] = intval($matches[1]) * (!empty($matches[2])) ? $bases[$matches[2]] : 1;
+		} else {
+			$this->maxUpload['value'] = 0;
+		}
 
 		# Taille maxi des données
 		$maxPost = strtoupper(ini_get("post_max_size"));
-		$this->maxPost['display'] = str_replace('M', ' Mo', $maxPost);
-		$this->maxPost['display'] = str_replace('K', ' Ko', $this->maxPost['display']);
-		if(substr_count($maxPost, 'K')) $this->maxPost['value'] = str_replace('K', '', $maxPost) * 1024;
-		elseif(substr_count($maxPost, 'M')) $this->maxPost['value'] = str_replace('M', '', $maxPost) * 1024 * 1024;
-		elseif(substr_count($maxPost, 'G')) $this->maxPost['value'] = str_replace('G', '', $maxPost) * 1024 * 1024 * 1024;
-		else $this->maxPost['value'] = 0;
-
+		$this->maxPost['display'] = strtr($maxPost, $units);
+		$this->maxUpload['display'] = strtr($maxUpload, $units);
+		if(preg_match($pattern, $maxPost, $matches)) {
+			$this->maxPost['value'] = intval($matches[1]) * (!empty($matches[2])) ? $bases[$matches[2]] : 1;
+		} else {
+			$this->maxPost['value'] = 0;
+		}
 	}
 
 	/**

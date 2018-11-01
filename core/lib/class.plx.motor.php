@@ -298,7 +298,7 @@ class plxMotor {
 				$url = $this->urlRewrite('?article'.intval($this->plxRecord_arts->f('numero')).'/'.$this->plxRecord_arts->f('url'));
 				eval($this->plxPlugins->callHook('plxMotorDemarrageNewCommentaire'));
 				if($retour[0] == 'c') { # Le commentaire a été publié
-					$_SESSION['msgcom'] = L_COM_PUBLISHED;				
+					$_SESSION['msgcom'] = L_COM_PUBLISHED;
 					header('Location: '.$url.'#'.$retour);
 				} elseif($retour == 'mod') { # Le commentaire est en modération
 					$_SESSION['msgcom'] = L_COM_IN_MODERATION;
@@ -1029,8 +1029,10 @@ class plxMotor {
 		preg_match('/^([0-9a-z\_\-\.\/]+)?[\?]?([0-9a-z\_\-\.\/,&=%]+)?[\#]?(.*)$/i', $url, $args);
 
 		if($this->aConf['urlrewriting']) {
-			$new_url  = str_replace('index.php', '', $args[1]);
-			$new_url  = str_replace('feed.php', 'feed/', $new_url);
+			$new_url = strtr($args[1], array(
+				'index.php'	=> '',
+				'feed.php'	=> 'feed/'
+			));
 			$new_url .= !empty($args[2])?$args[2]:'';
 			if(empty($new_url))	$new_url = $this->path_url;
 			$new_url .= !empty($args[3])?'#'.$args[3]:'';
