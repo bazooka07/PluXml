@@ -20,51 +20,69 @@ class plxDate {
 	 **/
 	public static function getCalendar($key, $value) {
 
+		if(!is_string($key) or (!is_string($value) and !is_integer($value))) { return false; }
 		$names = array(
 			'month' => array(
-				'01' => L_JANUARY,
-				'02' => L_FEBRUARY,
-				'03' => L_MARCH,
-				'04' => L_APRIL,
-				'05' => L_MAY,
-				'06' => L_JUNE,
-				'07' => L_JULY,
-				'08' => L_AUGUST,
-				'09' => L_SEPTEMBER,
-				'10' => L_OCTOBER,
-				'11' => L_NOVEMBER,
-				'12' => L_DECEMBER
+				L_JANUARY,
+				L_FEBRUARY,
+				L_MARCH,
+				L_APRIL,
+				L_MAY,
+				L_JUNE,
+				L_JULY,
+				L_AUGUST,
+				L_SEPTEMBER,
+				L_OCTOBER,
+				L_NOVEMBER,
+				L_DECEMBER
 			),
 			'short_month' => array(
-				'01' => L_SHORT_JANUARY,
-				'02' => L_SHORT_FEBRUARY,
-				'03' => L_SHORT_MARCH,
-				'04' => L_SHORT_APRIL,
-				'05' => L_SHORT_MAY,
-				'06' => L_SHORT_JUNE,
-				'07' => L_SHORT_JULY,
-				'08' => L_SHORT_AUGUST,
-				'09' => L_SHORT_SEPTEMBER,
-				'10' => L_SHORT_OCTOBER,
-				'11' => L_SHORT_NOVEMBER,
-				'12' => L_SHORT_DECEMBER
+				L_SHORT_JANUARY,
+				L_SHORT_FEBRUARY,
+				L_SHORT_MARCH,
+				L_SHORT_APRIL,
+				L_SHORT_MAY,
+				L_SHORT_JUNE,
+				L_SHORT_JULY,
+				L_SHORT_AUGUST,
+				L_SHORT_SEPTEMBER,
+				L_SHORT_OCTOBER,
+				L_SHORT_NOVEMBER,
+				L_SHORT_DECEMBER
+			),
+			'long_month' => array(
+				L_LONG_JANUARY,
+				L_LONG_FEBRUARY,
+				L_LONG_MARCH,
+				L_LONG_APRIL,
+				L_LONG_MAY,
+				L_LONG_JUNE,
+				L_LONG_JULY,
+				L_LONG_AUGUST,
+				L_LONG_SEPTEMBER,
+				L_LONG_OCTOBER,
+				L_LONG_NOVEMBER,
+				L_LONG_DECEMBER
 			),
 			'day' => array(
-				'1' => L_MONDAY,
-				'2' => L_TUESDAY,
-				'3' => L_WEDNESDAY,
-				'4' => L_THURSDAY,
-				'5' => L_FRIDAY,
-				'6' => L_SATURDAY,
-				'0' => L_SUNDAY
+				L_MONDAY,
+				L_TUESDAY,
+				L_WEDNESDAY,
+				L_THURSDAY,
+				L_FRIDAY,
+				L_SATURDAY,
+				L_SUNDAY
 			)
 		);
 
-		if(array_key_exists($key, $names) and array_key_exists($value, $names[$key]))
-			return $names[$key][$value];
-		else
-			return false;
-
+		if(array_key_exists($key, $names)) {
+			$i = intval($value);
+			if($i > 0) {
+				$i--;
+				if($i < count($names[$key])) { return $names[$key][$i]; }
+			}
+		}
+		return false;
 	}
 
 	/**
