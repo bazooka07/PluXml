@@ -1277,7 +1277,7 @@ XML_ENDS;
 					'@\bindex\.php$@'	=> '',
 					'@\bfeed\.php$@'	=> 'feed/'
 				);
-				$result .= preg_replace(array_keys($replaces), array_values($replaces), $matches[1]);
+				$result .= strtr($matches[1], $replaces);
 			}
 			# query
 			if(!empty($matches[2])) {
