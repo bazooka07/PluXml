@@ -8,7 +8,7 @@
  * @verson	2018-01-15
  **/
 
-include(dirname(__FILE__).'/prepend.php');
+include(__DIR__ .'/prepend.php');
 
 # Contrôle du token du formulaire
 plxToken::validateFormToken($_POST);
@@ -64,7 +64,7 @@ if(!empty($_GET['a'])) {
 }
 
 # On inclut le header
-include(dirname(__FILE__).'/top.php');
+include(__DIR__ .'/top.php');
 
 $comSels = array(
 	'online'	=> array('motif' => '/^\d{4}\.(.*)\.xml$/',				'mod' => '', 'h2'			 => L_COMMENTS_ONLINE_LIST),
@@ -309,5 +309,5 @@ ROW;
 # Hook Plugins
 eval($plxAdmin->plxPlugins->callHook('AdminCommentsFoot'));
 # On inclut le footer
-include(dirname(__FILE__).'/foot.php');
+include(__DIR__ .'/foot.php');
 ?>
