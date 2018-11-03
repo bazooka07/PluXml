@@ -847,7 +847,11 @@ class plxMotor {
 	public function artInfoFromFilename($filename) {
 
 		# On effectue notre capture d'informations
-		if(preg_match('/(_?\d{4})\.((?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12}).([\w-]+)\.xml$/', $filename, $capture)) {
+		if(preg_match(
+			'@(_?\d{4})\.((?:draft,)?(?:home|pin|\d{3})(?:,pin|,\d{3})*)\.(\d{3})\.(\d{12}).([\w-]+)\.xml$@',
+			basename($filename),
+			$capture
+		)) {
 			return array(
 				'artId'		=> $capture[1],
 				'catId'		=> $capture[2],
@@ -1386,8 +1390,18 @@ XML_ENDS;
 
 	public function pluginsCss($admin=false) {
 		$cible = ($admin) ? 'admin' : 'site';
-		$filename = "{$this->aConf['racine_plugins']}$cible.css";
-		if(is_file(PLX_ROOT.$filename)) {
+
+		// $filename = "{$this->aConf['racine_plugins']}$cible.css";
+		$filename = dirname(PLX_CONFIG_PATH)."/$cible.css";
+		if(
+			!file_exists(PLX_ROOT.$filename) or
+			($admin and defined('PARAMETRES_PLUGINS'))
+		) {
+			if($admin) { $this->plxPlugins->cssCache('admin', true); }
+			$this->plxPlugins->cssCache('site', true);
+		}
+
+		if(filesize(PLX_ROOT.$filename) > 40) { // if no CSS, save date of last checking
 			$href = ($admin) ? PLX_ROOT.$filename : $this->urlRewrite($filename);
 			$href .= '?d='.base_convert(filemtime(PLX_ROOT.$filename) & self::TIME_MASK, 10, 36);
 			echo <<< LINK
