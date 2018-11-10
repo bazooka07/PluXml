@@ -1129,7 +1129,7 @@ class plxMotor {
 	public function pluginsCss($admin=false) {
 		$cible = ($admin) ? 'admin' : 'site';
 		// $filename = "{$this->aConf['racine_plugins']}$cible.css";
-		$filename = dirname(PLX_CONFIG_PATH)."/$cible.css";
+		$filename = dirname(PLX_CONFIG_PATH)."/css/$cible.css";
 		if(
 			!file_exists(PLX_ROOT.$filename) or
 			($admin and defined('PARAMETRES_PLUGINS'))
@@ -1138,11 +1138,11 @@ class plxMotor {
 			$this->plxPlugins->cssCache('site', true);
 		}
 
-		if(filesize(PLX_ROOT.$filename) > 40) { // if no CSS, save date of last checking
+		if(file_exists(PLX_ROOT.$filename) and filesize(PLX_ROOT.$filename) > 40) { // if no CSS, save date of last checking
 			$href = ($admin) ? PLX_ROOT.$filename : $this->urlRewrite($filename);
 			$href .= '?d='.base_convert(filemtime(PLX_ROOT.$filename) & self::TIME_MASK, 10, 36);
 			echo <<< LINK
-<link rel="stylesheet" type="text/css" href="$href" media="screen" />\n
+	<link rel="stylesheet" type="text/css" href="$href" media="screen" />\n
 LINK;
 		}
 	}
