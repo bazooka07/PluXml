@@ -1,4 +1,6 @@
 /data/
+/my-datas/
+/*.bak/
 /plugins/
 !/themes/defaut/
 /themes/
