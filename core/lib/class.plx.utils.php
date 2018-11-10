@@ -8,6 +8,9 @@
  **/
 class plxUtils {
 
+	const LANGUAGES_PATTERN = '@(([a-z]{2}(?:-[A-Z]{2})?)(?:;q=(1|0.\d+))?)@';
+	const CONTENT_PATTERN = '@(\w+/(?:\w+(?:\+\w+)?|\*))(?:;q=(0\.\d+))?@';
+
 	/**
 	 * Méthode qui vérifie si une variable est définie.
 	 * Renvoie la valeur de la variable ou la valeur par défaut passée en paramètre
@@ -131,6 +134,61 @@ class plxUtils {
 			$localIP = getHostByName(getHostName());
 
 		return plxUtils::isValidIp($ip) ? $ip : $localIP;
+	}
+
+	/**
+	 * Méthode qui vérifie que la langue demandée par le navigateur du visiteur correspond à une langue spécifique ou à la collection de langues proposée par PLuXml.
+	 *
+	 * @param	lang string optionnel comprend 2 caractères en minuscules, langue acceptée par PluXml.
+	 * @return	mixed true si correspond à la langue passée en paramètre, string correspond à une langue de la collection, false en cas d'échec'
+	 * @author	J.P. Pourrez aka bazooka07
+	 * */
+	public static function checkLanguage($lang=false) {
+		if(
+			!empty($_SERVER['HTTP_ACCEPT_LANGUAGE']) and
+			preg_match_all(self::LANGUAGES_PATTERN, $_SERVER['HTTP_ACCEPT_LANGUAGE'], $matches, PREG_SET_ORDER)
+		) {
+			if(is_string($lang) and strlen($lang) == 2) {
+				foreach($matches as $set1) {
+					if(substr($set1[2], 0, 2)) {
+						return true;
+						break;
+					}
+				}
+			} else {
+				$all_langs = plxUtils::getLangs();
+				foreach($matches as $set1) {
+					$lang = substr($set1[2], 0, 2);
+					if(in_array($lang, $all_langs)) {
+						return $lang;
+						break;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Méthode qui vérifie que le navigateur attend du contenu avec un certain mime-type.
+	 *
+	 * @return	mixed Si $mime est une valeur vide, retourne un tableau des mime-type accepté par le navigateur. Sinon retourne true en cas de succès, false dans le cas contraire.
+	 * @author	J.P. Pourrez
+	 * */
+	public static function checkContent($mime='text/html') {
+		if(!empty($_SERVER['HTTP_ACCEPT'])) {
+			if(empty($mime)) {
+				if(preg_match_all(self::CONTENT_PATTERN, $_SERVER['HTTP_ACCEPT'], $matches, PREG_SET_ORDER)) {
+					return array_map(
+						function($item) { return $item[1]; },
+						$matches
+					);
+				}
+			} else {
+				return preg_match('@\b'.$mime.'\b@', $_SERVER['HTTP_ACCEPT']);
+			}
+		}
+		return false;
 	}
 
 	/**
