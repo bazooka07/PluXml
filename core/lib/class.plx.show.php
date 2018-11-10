@@ -256,46 +256,42 @@ class plxShow {
 	 * @scope	global
 	 * @author	Stéphane F
 	 **/
-	public function meta($meta='') {
+	public function meta($meta=false) {
 		# Hook Plugins
-		if(eval($this->plxMotor->plxPlugins->callHook('plxShowMeta'))) return;
+		if(eval($this->plxMotor->plxPlugins->callHook('plxShowMeta'))) { return; }
 
-		if(!in_array($meta, array('description','keywords','author')))
-			return;
+		if(!is_string($meta) or empty($meta)) { return; }
+		$meta = strtolower($meta);
+		if(!in_array($meta, array('description','keywords','author'))) { return; }
 
-		$meta=strtolower($meta);
-
-		if($this->plxMotor->mode == 'home') {
-			if(!empty($this->plxMotor->aConf['meta_'.$meta]))
-				echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($this->plxMotor->aConf['meta_'.$meta]).'" />'."\n";
-			return;
-		}
-		if($this->plxMotor->mode == 'article') {
-			if($meta=='author')
-				echo '<meta name="author" content="'.$this->artAuthor(false).'" />'."\n";
-			else {
-				$meta_content=trim($this->plxMotor->plxRecord_arts->f('meta_'.$meta));
-				if(!empty($meta_content))
-					echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($meta_content).'" />'."\n";
-				elseif(!empty($this->plxMotor->aConf['meta_'.$meta]))
-					echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($this->plxMotor->aConf['meta_'.$meta]).'" />'."\n";
+		$key = 'meta_'.$meta;
+		if($meta != 'author') {
+			switch($this->plxMotor->mode) {
+				case 'article':
+					$value = $this->plxMotor->plxRecord_arts->f($key);
+					break;
+				case 'static':
+					$value = $this->plxMotor->aStats[ $this->plxMotor->cible ][$key];
+					break;
+				case 'categorie':
+					$value = $this->plxMotor->aCats[ $this->plxMotor->cible ][$key];
+					break;
 			}
+		} elseif($this->plxMotor->mode == 'article') {
+			$value = $this->artAuthor(false);
+		} else {
 			return;
 		}
-		if($this->plxMotor->mode == 'static') {
-			if(!empty($this->plxMotor->aStats[ $this->plxMotor->cible ]['meta_'.$meta]))
-				echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($this->plxMotor->aStats[ $this->plxMotor->cible ]['meta_'.$meta]).'" />'."\n";
-			elseif(!empty($this->plxMotor->aConf['meta_'.$meta]))
-				echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($this->plxMotor->aConf['meta_'.$meta]).'" />'."\n";
-			return;
+		// default value
+		if(empty($value)) {
+			if(!array_key_exists($key, $this->plxMotor->aConf)) { return; }
+			$value =  $this->plxMotor->aConf[$key];
+			if(empty($value)) { return; }
 		}
-		if($this->plxMotor->mode == 'categorie') {
-			if(!empty($this->plxMotor->aCats[ $this->plxMotor->cible ]['meta_'.$meta]))
-				echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($this->plxMotor->aCats[ $this->plxMotor->cible ]['meta_'.$meta]).'" />'."\n";
-			elseif(!empty($this->plxMotor->aConf['meta_'.$meta]))
-				echo '<meta name="'.$meta.'" content="'.plxUtils::strCheck($this->plxMotor->aConf['meta_'.$meta]).'" />'."\n";
-			return;
-		}
+		$content = plxUtils::strCheck($value);
+		echo <<< META
+	<meta name="$meta" content="$content" />\n
+META;
 	}
 
 	/**
