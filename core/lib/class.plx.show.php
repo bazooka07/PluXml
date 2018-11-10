@@ -562,7 +562,7 @@ FMT3;
 				$img_size = getimagesize(PLX_ROOT.$img_thumb);
 			} else {
 				$img_thumb_url = $img_url;
-				$img_size = getimagesize(PLX_ROOT.$img_url);
+				$img_size = getimagesize(PLX_ROOT.$filename);
 			}
 			$replaces = array(
 				'#img_url'			=> $img_url,
