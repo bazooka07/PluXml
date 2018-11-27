@@ -300,10 +300,13 @@ input[maxlength="3"] {
 	white-space: normal;
 }
 
-#plugins-table img,
-#medias-table img {
+#plugins-table img {
 	max-width: 48px;
-	padding-top: 7px;
+	vertical-align: bottom;
+}
+#medias-table img {
+	max-width: initial !important;
+	vertical-align: bottom;
 }
 #medias-table img[data-src] {
 	cursor: pointer;

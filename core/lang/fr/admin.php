@@ -88,7 +88,7 @@ $LANG = array(
 'L_PLXMEDIAS_RECREATE_THUMB_ERR'	=> 'Erreur pendant la création de la vignette',
 'L_PLXMEDIAS_RECREATE_THUMBS_ERR'	=> 'Erreur pendant la création des vignettes',
 'L_PLXMEDIAS_RECREATE_THUMB_SUCCESSFUL'	=> 'Vignette créée avec succès',
-'L_PLXMEDIAS_RECREATE_THUMBS_SUCCESSFUL'=> 'Vignettes créées avec succès',
+'L_PLXMEDIAS_RECREATE_THUMBS_SUCCESSFUL'=> '%d Vignettes créées avec succès',
 
 # article.php
 
