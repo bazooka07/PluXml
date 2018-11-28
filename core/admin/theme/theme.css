@@ -300,10 +300,7 @@ input[maxlength="3"] {
 	white-space: normal;
 }
 
-#plugins-table img {
-	max-width: 48px;
-	vertical-align: bottom;
-}
+#plugins-table img ,
 #medias-table img {
 	max-width: initial !important;
 	vertical-align: bottom;

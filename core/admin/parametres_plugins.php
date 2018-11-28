@@ -53,7 +53,7 @@ function pluginsList($plugins, $defaultLang, $type) {
 				$output .= '<input type="checkbox" name="chkAction[]" value="'.$plugName.'" />';
 				$output .= "</td>\n";
 				# icon
-				$output .= '<td><img src="'.$icon.'" alt="" /></td>';
+				$output .= '<td><img src="'.$icon.'" width="48" height="48" alt="<?php echo $plugName;?>" /></td>';
 
 				# plugin infos
 				$output .= '<td class="wrap">';
