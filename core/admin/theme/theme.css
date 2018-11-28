@@ -272,7 +272,7 @@ input[maxlength="3"] {
 	text-align: right;
 }
 
-#medias-table td {
+#medias-table tbody tr {
 	height: 6rem;
 }
 #medias-table td:nth-of-type(2) {
@@ -313,11 +313,15 @@ input[maxlength="3"] {
 	margin-top: 10px;
 }
 
+#medias-table th:not(:nth-of-type(3)) {
+	text-align: center;
+}
 #medias-table td:nth-of-type(5) {
-	text-align: right;
+	text-align: right; /* taille */
 }
 
-#medias-table td:nth-of-type(6) {
+#medias-table td:nth-of-type(4),  /* extension */
+#medias-table td:nth-of-type(6) { /* dimensions */
 	text-align: center;
 }
 

@@ -198,13 +198,14 @@ $curFolders = explode('/', $curFolder);
 				</tr>
 				</thead>
 				<tbody>
-				<?php
+<?php
 				# Initialisation de l'ordre
 				$num = 0;
 				# Si on a des fichiers
 				if($plxMedias->aFiles) {
+					$offsetRoot = strlen(PLX_ROOT);
 					foreach($plxMedias->aFiles as $v) { # Pour chaque fichier
-						$isImage = in_array(strtolower($v['extension']), array('.png', '.gif', '.jpg', '.jpeg'));
+						$isImage = preg_match('@\.(?:jpe?g|png|gif)$@i', $v['extension']);
 						$ordre = ++$num;
 						echo '<tr>';
 						echo '<td><input type="checkbox" name="idFile[]" value="'.$v['name'].'" /></td>';
@@ -214,37 +215,40 @@ $curFolders = explode('/', $curFolder);
 							}
 						echo '</td>';
 						echo '<td>';
-							echo '<a class="imglink" onclick="'."this.target='_blank'".'" title="'.plxUtils::strCheck($v['name']).'" href="'.$v['path'].'">'.plxUtils::strCheck($v['name']).'</a>';
-							echo '<div onclick="copy(this, \''.str_replace(PLX_ROOT, '', $v['path']).'\')" title="'.L_MEDIAS_LINK_COPYCLP.'" class="ico">&#8629;<div>'.L_MEDIAS_LINK_COPYCLP_DONE.'</div></div>';
+							echo '<a class="imglink" title="'.$v['name'].'" href="'.$v['path'].'" target="_blank">'.$v['name'].'</a>';
+							echo '<div onclick="copy(this, \''.substr($v['path'], $offsetRoot).'\')" title="'.L_MEDIAS_LINK_COPYCLP.'" class="ico">&#8629;<div>'.L_MEDIAS_LINK_COPYCLP_DONE.'</div></div>';
 							echo '<div id="btnRenameImg'.$num.'" onclick="ImageRename(\''.$v['path'].'\')" title="'.L_RENAME_FILE.'" class="ico">&perp;</div>';
 							echo '<br />';
 							$href = plxUtils::thumbName($v['path']);
 							if($isImage AND is_file($href)) {
-								echo L_MEDIAS_THUMB.' : '.'<a onclick="'."this.target='_blank'".'" title="'.L_MEDIAS_THUMB.' : '.plxUtils::strCheck(basename($href)).'" href="'.$href.'">'.plxUtils::strCheck(basename($href)).'</a>';
-								echo '<div onclick="copy(this, \''.str_replace(PLX_ROOT, '', $href).'\')" title="'.L_MEDIAS_LINK_COPYCLP.'" class="ico">&#8629;<div>'.L_MEDIAS_LINK_COPYCLP_DONE.'</div></div>';
+								echo L_MEDIAS_THUMB.' : '.'<a title="'.L_MEDIAS_THUMB.' : '.basename($href).'" href="'.$href.'" target="_blank">'.basename($href).'</a>';
+								echo '<div onclick="copy(this, \''.substr($href, $offsetRoot).'\')" title="'.L_MEDIAS_LINK_COPYCLP.'" class="ico">&#8629;<div>'.L_MEDIAS_LINK_COPYCLP_DONE.'</div></div>';
 							}
 						echo '</td>';
-						echo '<td>'.strtoupper($v['extension']).'</td>';
+						echo '<td>'.substr($v['extension'],1).'</td>';
 						echo '<td>';
-							echo plxUtils::formatFilesize($v['filesize']);
-							if($isImage AND is_file($href)) {
-								echo '<br />'.plxUtils::formatFilesize($v['thumb']['filesize']);
-							}
+						echo plxUtils::formatFilesize($v['filesize']);
+						if($isImage AND is_file($href)) {
+							echo '<br />'.plxUtils::formatFilesize($v['thumb']['filesize']);
+						}
 						echo '</td>';
 						$dimensions = '&nbsp;';
-						if($isImage AND (isset($v['infos']) AND isset($v['infos'][0]) AND isset($v['infos'][1]))) {
-							$dimensions = $v['infos'][0].' x '.$v['infos'][1];
-						}
-						if($isImage AND is_file($href)) {
-							$dimensions .= '<br />'.$v['thumb']['infos'][0].' x '.$v['thumb']['infos'][1];
+						if($isImage) {
+							if(isset($v['infos']) AND isset($v['infos'][0]) AND isset($v['infos'][1])) {
+								$dimensions = $v['infos'][0].' x '.$v['infos'][1];
+							}
+							if(is_file($href)) {
+								$dimensions .= '<br />'.$v['thumb']['infos'][0].' x '.$v['thumb']['infos'][1];
+							}
 						}
 						echo '<td>'.$dimensions.'</td>';
 						echo '<td>'.plxDate::formatDate(plxDate::timestamp2Date($v['date'])).'</td>';
 						echo '</tr>';
 					}
+				} else {
+					echo '<tr><td colspan="7" class="center">'.L_MEDIAS_NO_FILE.'</td></tr>';
 				}
-				else echo '<tr><td colspan="7" class="center">'.L_MEDIAS_NO_FILE.'</td></tr>';
-				?>
+?>
 				</tbody>
 			</table>
 		</div>

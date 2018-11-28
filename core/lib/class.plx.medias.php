@@ -108,16 +108,18 @@ class plxMedias {
 		$src = $this->path.$dir;
 		if(!is_dir($src)) return array();
 
-		$defaultSample = PLX_CORE.'admin/theme/images/file.png';
+		$iconsPath = PLX_CORE.'admin/theme/exts/48/';
 		$offset = strlen($this->path);
 		$files = array();
 		foreach(array_filter(
 			glob($src.'*'),
 			function($item) { return !preg_match('@\.tb\.\w+$@', $item); } # On rejette les miniatures
 		) as $filename) {
-			if(is_dir($filename)) { continue; }
+			if(is_dir($filename) or preg_match(('@(?:html?|php)@i'), $filename)) { continue; }
 
 			$thumbInfos = false;
+			$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+			$icon = $iconsPath.'_blank.png';
 			if(preg_match('@\.(jpe?g|png|gif)$@i', $filename, $matches)) {
 				# Youpi! We catch a picture
 				$thumbName = plxUtils::thumbName($filename);
@@ -128,25 +130,32 @@ class plxMedias {
 					);
 				}
 				$sample = $this->path. '.thumbs/' .substr($filename, $offset);
-				$sampleOk = (
+				if(
 					file_exists($sample) or
 					plxUtils::makeThumb(
 						$filename,
 						$sample
 					)
-				);
+				) {
+					$icon = $sample;
+				}
 				$imgSize = getimagesize($filename);
 			} else {
+				# No picture
 				$imgSize = false;
+				$iconFilename = $iconsPath.rtrim($ext, 'x').'.png'; // rtrim() is a hack against Microsoft
+				if(file_exists($iconFilename)) {
+					$icon = $iconFilename;
+				}
 			}
 			$stats = stat($filename);
 			$files[basename($filename)] = array(
-				'.thumb'	=> (!empty($sampleOk)) ? $sample : $defaultSample,
+				'.thumb'	=> $icon,
 				'name' 		=> basename($filename),
 				'path' 		=> $filename,
 				'date' 		=> $stats['mtime'],
 				'filesize' 	=> $stats['size'],
-				'extension'	=> '.' . strtolower(pathinfo($filename, PATHINFO_EXTENSION)),
+				'extension'	=> '.' . $ext,
 				'infos' 	=> $imgSize,
 				'thumb' 	=> $thumbInfos
 			);
