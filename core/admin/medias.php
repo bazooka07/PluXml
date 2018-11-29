@@ -349,10 +349,14 @@ $curFolders = explode('/', $curFolder);
 		<button type="button" class="closeBtn">x</button>
 		<button type="button" class="prevBtn">◀</button>
 		<button type="button" class="nextBtn">▶</button>
-		<div class="counter">&nbsp;</div>
-		<input id="clipboard-entry" type="text" />
+		<div class="footer">
+			<div class="size" title="<?php echo L_MEDIAS_FILESIZE ?>">&nbsp;</div>
+			<div class="filename" title="<?php echo L_MEDIAS_LINK_COPYCLP; ?>" data-root="<?php echo PLX_ROOT;?>">&nbsp;</div>
+			<div class="counter">&nbsp;</div>
+		</div>
 	</div>
 </div>
+<input id="clipboard-entry" type="text" />
 
 <script>
 function toggle_divs(){
@@ -371,20 +375,36 @@ function toggle_divs(){
 	const imgs = Array.prototype.slice.call(document.querySelectorAll('img[data-src]'));
 	if(imgs.length > 0) {
 		const dialogBox = document.querySelector('.modal');
-		const img = document.querySelector('.modal .modal-box img');
 		const closeBtn = document.querySelector('.modal button.closeBtn');
 		const prevBtn = document.querySelector('.modal button.prevBtn');
 		const nextBtn = document.querySelector('.modal button.nextBtn');
+		const size = document.querySelector('.modal div.size');
+		const filename = document.querySelector('.modal div.filename');
+		const offset = (filename.hasAttribute('data-root')) ? filename.getAttribute('data-root').length : 0;
 		const counter = document.querySelector('.modal div.counter');
+		const img = document.querySelector('.modal .modal-box img');
+		img.onload = function(event) {
+			size.textContent = img.width + ' x ' + img.height;
+		};
 		var pos = null;
 		var imgSrcList = [];
+
+		function copyToClipboard(value) {
+			const entry = document.getElementById('clipboard-entry');
+			entry.value = value;
+			entry.select();
+			document.execCommand('copy');
+			alert('<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?> : \n' + value);
+		}
 
 		function setImgSrc(index) {
 			if(index < 0 || index > imgSrcList.length - 1) { return; }
 			pos = index;
-			img.src = imgSrcList[pos];
+			var src = imgSrcList[pos];
+			img.src = src;
 			prevBtn.disabled = (pos <= 0);
 			nextBtn.disabled = (pos >= imgSrcList.length -1);
+			filename.textContent = (offset > 0) ? src.substring(offset) : src;
 			counter.textContent = (pos + 1) + ' / ' + imgSrcList.length;
 		}
 
@@ -407,6 +427,10 @@ function toggle_divs(){
 		});
 		nextBtn.addEventListener('click', function(event) {
 			setImgSrc(pos + 1);
+			event.preventDefault();
+		});
+		filename.addEventListener('click', function(event) {
+			copyToClipboard(this.textContent);
 			event.preventDefault();
 		});
 
@@ -441,11 +465,7 @@ function toggle_divs(){
 						// On calcule l'url de la miniature
 						value = value.replace(/(\.(?:jpe?g|png|gif))$/, '.tb$1');
 					}
-					const entry = document.getElementById('clipboard-entry');
-					entry.value = value;
-					entry.select();
-					document.execCommand('copy');
-					alert('<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>');
+					copyToClipboard(value);
 				}
 			}
 		});
