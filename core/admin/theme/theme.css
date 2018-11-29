@@ -632,6 +632,7 @@ th.checkbox {
 	margin-top: 50vh;
 	transform: translateY(-50%);
 }
+
 .modal button.prevBtn { left: 1rem; }
 .modal button.nextBtn { right: 1rem; }
 
