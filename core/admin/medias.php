@@ -161,7 +161,7 @@ $curFolders = explode('/', $curFolder);
 				<input type="submit" name="btn_changefolder" value="<?php echo L_OK ?>" />&nbsp;&nbsp;&nbsp;&nbsp;
 			</div>
 			<div>
-				<input type="text" id="medias-search" onkeyup="plugFilter()" placeholder="<?php echo L_SEARCH ?>..." title="<?php echo L_SEARCH ?>" />
+				<input type="text" id="medias-search" placeholder="<?php echo L_SEARCH ?>..." title="<?php echo L_SEARCH ?>" />
 			</div>
 		</div>
 
@@ -481,25 +481,69 @@ $curFolders = explode('/', $curFolder);
 			}
 		});
 
-		// gestion des icones du tableau de medias
-		document.getElementById('medias-table').addEventListener('click', function(event) {
-			const el = event.target;
-			if(el.tagName == 'I' && el.classList.contains('icon-media')) {
-				const a = el.parentElement.querySelector('a[href]');
-				if(a != null) {
-					event.preventDefault();
-					const value = a.href;
-					if(!el.hasAttribute('data-rename')) {
-						// copy link into the clipboard
-						copyToClipboard(value);
+		// gestion des icones et de la recherche dans le tableau de medias
+		const mediasTable = document.getElementById('medias-table');
+		if(mediasTable != null) {
+			mediasTable.addEventListener('click', function(event) {
+				const el = event.target;
+				if(el.tagName == 'I' && el.classList.contains('icon-media')) {
+					const a = el.parentElement.querySelector('a[href]');
+					if(a != null) {
+						event.preventDefault();
+						const value = a.href;
+						if(!el.hasAttribute('data-rename')) {
+							// copy link into the clipboard
+							copyToClipboard(value);
+						} else {
+							// rename the file
+							document.getElementById('id_oldname').value = value;
+							dialogBox('dlgRenameFile');
+						}
+					}
+				}
+			});
+
+			// Look for a media
+			const STORAGE_KEY = 'medias_search';
+			var mediaRows = mediasTable.tBodies[0].rows;
+
+			function lookForMedias(value) {
+				for(var i=0, iMax=mediaRows.length; i<iMax; i++) {
+					if(!mediaRows[i].dataset.hasOwnProperty('media')) {
+						mediaRows[i].dataset.media = mediaRows[i].querySelector('a.imglink').textContent.toLowerCase();
+					}
+					if(mediaRows[i].dataset.media.indexOf(value) >= 0) {
+						mediaRows[i].classList.remove('hidden');
 					} else {
-						// rename the file
-						document.getElementById('id_oldname').value = value;
-						dialogBox('dlgRenameFile');
+						mediaRows[i].classList.add('hidden');
 					}
 				}
 			}
-		});
+
+			const searchInput = document.getElementById('medias-search');
+			if(searchInput != null) {
+				searchInput.onkeyup = function(event) {
+					event.preventDefault();
+					const value = event.target.value.toLowerCase();
+					lookForMedias(value);
+					if(typeof(localStorage) == 'object') {
+						if(value.length > 0) {
+							localStorage.setItem(STORAGE_KEY, value);
+						} else {
+							localStorage.removeItem(STORAGE_KEY);
+						}
+					}
+				};
+
+				if(typeof(localStorage) == 'object') {
+					const value = localStorage.getItem(STORAGE_KEY);
+					if(value != null) {
+						searchInput.value = value;
+						lookForMedias(value);
+					}
+				}
+			}
+		}
 	}
 
 	// New directory
@@ -522,32 +566,6 @@ $curFolders = explode('/', $curFolder);
 	}
 
 })();
-
-function plugFilter() {
-	var input, filter, table, tr, td, i;
-	filter = document.getElementById("medias-search").value;
-	table = document.getElementById("medias-table");
-	tr = table.getElementsByTagName("tr");
-	for (i = 0; i < tr.length; i++) {
-		td = tr[i].getElementsByTagName("td")[2];
-		if (td != undefined) {
-			if (td.innerHTML.toLowerCase().indexOf(filter.toLowerCase()) > -1) {
-				tr[i].style.display = "";
-			} else {
-				tr[i].style.display = "none";
-			}
-		}
-	}
-	if (typeof(Storage) !== "undefined" && filter !== "undefined") {
-		localStorage.setItem("medias_search", filter);
-	}
-}
-if (typeof(Storage) !== "undefined" && localStorage.getItem("medias_search") !== "undefined") {
-	input = document.getElementById("medias-search");
-	input.value = localStorage.getItem("medias_search");
-	plugFilter();
-}
-
 </script>
 
 <?php

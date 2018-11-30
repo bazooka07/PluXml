@@ -303,6 +303,9 @@ label[for="id_toggle_medias"] {
 #medias-table tbody tr {
 	height: 6rem;
 }
+#medias-table tbody tr.hidden {
+	display: none;
+}
 #medias-table td:nth-of-type(2) {
 	min-width: 62px;
 }
