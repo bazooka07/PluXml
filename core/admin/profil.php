@@ -48,12 +48,14 @@ $_profil = $plxAdmin->aUsers[$_SESSION['user']];
 		<div class="grid">
 			<div class="col sml-12">
 				<label for="id_name"><?php echo L_PROFIL_USER ?>&nbsp;:</label>
+				<i class="ico icon-user"></i>
 				<?php plxUtils::printInput('name', plxUtils::strCheck($_profil['name']), 'text', '20-255') ?>
 			</div>
 		</div>
 		<div class="grid">
 			<div class="col sml-12">
 				<label for="id_email"><?php echo L_PROFIL_MAIL ?>&nbsp;:</label>
+				<i class="ico icon-mail-alt"></i>
 				<?php plxUtils::printInput('email', plxUtils::strCheck($_profil['email']), 'text', '30-255') ?>
 			</div>
 		</div>
@@ -81,12 +83,14 @@ $_profil = $plxAdmin->aUsers[$_SESSION['user']];
 		<div class="grid">
 			<div class="col sml-12">
 				<label for="id_password1"><?php echo L_PROFIL_PASSWORD ?>&nbsp;:</label>
+				<i class="ico icon-lock"></i>
 				<?php plxUtils::printInput('password1', '', 'password', '20-255', false, '', '', 'onkeyup="pwdStrength(this.id)"') ?>
 			</div>
 		</div>
 		<div class="grid">
 			<div class="col sml-12">
 				<label for="id_password2"><?php echo L_PROFIL_CONFIRM_PASSWORD ?>&nbsp;:</label>
+				<i class="ico icon-lock"></i>
 				<?php plxUtils::printInput('password2', '', 'password', '20-255') ?>
 			</div>
 		</div>

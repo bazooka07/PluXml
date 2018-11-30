@@ -887,3 +887,16 @@ select::-ms-expand {
 	background-color: green;
 	color: #fff;
 }
+
+/* -------- for : iconic font Fontello ---------- */
+.ico {
+  position: absolute;
+  text-indent: 5px;
+  margin-top: 4px;
+}
+
+.ico~input[type="text"],
+.ico~input[type="password"],
+.ico~input[type="password"] {
+  text-indent: 30px;
+}
