@@ -60,25 +60,6 @@ function pwdStrength(id, s) {
 	var pwdstr=document.getElementById(id+'_strenght');
 	pwdstr.innerHTML='';if(no>0){pwdstr.innerHTML=s[no-1]};
 }
-function dialogBox(dlg) {
-	this.dlg = document.getElementById(dlg);
-	this.span = document.querySelector('#'+dlg+' .dialog-close');
-	var self = this;
-	this.open = function() {
-		self.dlg.style.display = "block";
-	}
-	this.close = function() {
-		self.dlg.style.display = "none";
-	}
-	this.addEvent = function (element, evnt, funct){
-		if (element.attachEvent)
-			return element.attachEvent('on'+evnt, funct);
-		else
-		return element.addEventListener(evnt, funct, false);
-	}
-	this.addEvent(this.span, 'click', this.close);
-	this.open();
-}
 var DragDrop = {
 	isbefore: function(a, b) {
 		if (a.parentNode == b.parentNode) {

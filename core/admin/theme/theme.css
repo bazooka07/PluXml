@@ -299,7 +299,16 @@ input[maxlength="3"] {
 	word-break: break-all;
 	white-space: normal;
 }
-
+#medias-table i.icon-media {
+	margin-left: 0.3rem;
+	padding: 0.5rem 0.7rem;
+	font-family: fontello;
+}
+#medias-table i.icon-media:hover {
+	background-color: #444;
+	color: #fff;
+	cursor: pointer;
+}
 #plugins-table img ,
 #medias-table img {
 	max-width: initial !important;
@@ -658,6 +667,11 @@ th.checkbox {
 	padding: 0.3rem 0.8rem;
 	background-color: #000e;
 }
+.modal div.footer > div.filename::after {
+	content: '\e803';
+	font-family: fontello;
+	padding-left: 1.5rem;
+}
 .modal div.footer > div.filename:hover {
 	background-color: #258fd6;
 	cursor: pointer;
@@ -750,45 +764,48 @@ div.ico div {
 
 .dialog {
 	/* Hidden by default */
-	display: none;
+	display: none; /* or flex */
 	/* Stay in place */
 	position: fixed;
-	/* Sit on top */
-	z-index: 9999;
 	/* Location of the box */
-	padding-top: 100px;
 	left: 0;
 	top: 0;
 	/* Full width */
-	width: 100%;
+	width: 100vw;
 	/* Full height */
-	height: 100%;
+	height: 100vh;
 	/* Enable scroll if needed */
 	overflow: auto;
 	/* Fallback color */
 	background-color: rgb(0, 0, 0);
 	/* Black w/ opacity */
 	background-color: rgba(0, 0, 0, 0.4);
+	/* Sit on top */
+	z-index: 999;
+}
+.dialog.active {
+	display: flex;
 }
 
 /* Dialog Content */
-
 .dialog-content {
 	background-color: #fefefe;
 	margin: auto;
 	padding: 20px;
 	border: 1px solid #888;
-	width: 40%;
-	min-width: 250px;
+}
+
+.dialog-content input[type="text"] {
+	margin: 0 1rem;
 }
 
 /* The Close Button */
-
 .dialog-close {
-	color: #aaaaaa;
-	float: right;
-	font-size: 28px;
-	font-weight: bold;
+	display: inline-block;
+	margin: 0 0 -0.8rem 1rem;
+	vertical-align: bottom;
+	color: #aaa;
+	font-size: 200%;
 }
 
 .dialog-close:hover,

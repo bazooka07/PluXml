@@ -122,27 +122,6 @@ $curFolders = explode('/', $curFolder);
 
 <form action="medias.php" method="post" id="form_medias">
 
-	<!-- New Folder Dialog -->
-	<div id="dlgNewFolder" class="dialog">
-		<div class="dialog-content">
-			<span class="dialog-close">&times;</span>
-			<?php echo L_MEDIAS_NEW_FOLDER ?>&nbsp;:&nbsp;
-			<input id="id_newfolder" type="text" name="newfolder" value="" maxlength="50" size="15" />
-			<input type="submit" name="btn_newfolder" value="<?php echo L_MEDIAS_CREATE_FOLDER ?>" />
-		</div>
-	</div>
-
-	<!-- Rename File Dialog -->
-	<div id="dlgRenameFile" class="dialog">
-		<div class="dialog-content">
-			<span class="dialog-close">&times;</span>
-			<?php echo L_MEDIAS_NEW_NAME ?>&nbsp;:&nbsp;
-			<input id="id_newname" type="text" name="newname" value="" maxlength="50" size="15" />
-			<input id="id_oldname" type="hidden" name="oldname" />
-			<input type="submit" name="btn_renamefile" value="<?php echo L_MEDIAS_RENAME ?>" />
-		</div>
-	</div>
-
 	<div class="inline-form" id="files_manager">
 
 		<div class="inline-form action-bar">
@@ -165,7 +144,7 @@ $curFolders = explode('/', $curFolder);
 			<input type="submit" name="btn_ok" value="<?php echo L_OK ?>" onclick="return confirmAction(this.form, 'id_selection', 'delete', 'idFile[]', '<?php echo L_CONFIRM_DELETE ?>')" />
 			&nbsp;&nbsp;&nbsp;
 			<input type="submit" onclick="toggle_divs();return false" value="<?php echo L_MEDIAS_ADD_FILE ?>" />
-			<button onclick="dialogBox('dlgNewFolder');return false;" id="btnNewFolder"><?php echo L_MEDIAS_NEW_FOLDER ?></button>
+			<button id="btnNewFolder"><?php echo L_MEDIAS_NEW_FOLDER ?></button>
 			<?php if(!empty($_SESSION['folder'])) { ?>
 			&nbsp;&nbsp;&nbsp;<input type="submit" name="btn_delete" class="red" value="<?php echo L_DELETE_FOLDER ?>" onclick="return confirm('<?php printf(L_MEDIAS_DELETE_FOLDER_CONFIRM, $curFolder) ?>')" />
 			<?php } ?>
@@ -214,21 +193,25 @@ $curFolders = explode('/', $curFolder);
 								echo '<img src="'.$v['.thumb'].'" title="'.plxUtils::strCheck($v['name']).'" data-src="'.$v['path'].'" class="thumb" />';
 							}
 						echo '</td>';
-						echo '<td>';
-							echo '<a class="imglink" title="'.$v['name'].'" href="'.$v['path'].'" target="_blank">'.$v['name'].'</a>';
-							echo '<div onclick="copy(this, \''.substr($v['path'], $offsetRoot).'\')" title="'.L_MEDIAS_LINK_COPYCLP.'" class="ico">&#8629;<div>'.L_MEDIAS_LINK_COPYCLP_DONE.'</div></div>';
-							echo '<div id="btnRenameImg'.$num.'" onclick="ImageRename(\''.$v['path'].'\')" title="'.L_RENAME_FILE.'" class="ico">&perp;</div>';
-							echo '<br />';
-							$href = plxUtils::thumbName($v['path']);
-							if($isImage AND is_file($href)) {
-								echo L_MEDIAS_THUMB.' : '.'<a title="'.L_MEDIAS_THUMB.' : '.basename($href).'" href="'.$href.'" target="_blank">'.basename($href).'</a>';
-								echo '<div onclick="copy(this, \''.substr($href, $offsetRoot).'\')" title="'.L_MEDIAS_LINK_COPYCLP.'" class="ico">&#8629;<div>'.L_MEDIAS_LINK_COPYCLP_DONE.'</div></div>';
+						echo '<td>'.
+							'<div>'.
+								'<a class="imglink" href="'.$v['path'].'" target="_blank">'.$v['name'].'</a>'.
+								'<i class="icon-media" title="'.L_MEDIAS_LINK_COPYCLP.'">&#xf0ea;</i>'.
+								'<i class="icon-media" title="'.L_RENAME_FILE.'" data-rename>&#xe803;</i>'.
+								'</div>';
+							if($v['thumb'] !== false) {
+								$href = plxUtils::thumbName($v['path']);
+								echo '<div>'.
+									L_MEDIAS_THUMB.' : '.
+									'<a href="'.$href.'" target="_blank">'.basename($href).'</a>'.
+									'<i class="icon-media" title="'.L_MEDIAS_LINK_COPYCLP.'">&#xf0ea;</i>'.
+									'</div>';
 							}
 						echo '</td>';
 						echo '<td>'.substr($v['extension'],1).'</td>';
 						echo '<td>';
 						echo plxUtils::formatFilesize($v['filesize']);
-						if($isImage AND is_file($href)) {
+						if($v['thumb'] !== false) {
 							echo '<br />'.plxUtils::formatFilesize($v['thumb']['filesize']);
 						}
 						echo '</td>';
@@ -237,7 +220,7 @@ $curFolders = explode('/', $curFolder);
 							if(isset($v['infos']) AND isset($v['infos'][0]) AND isset($v['infos'][1])) {
 								$dimensions = $v['infos'][0].' x '.$v['infos'][1];
 							}
-							if(is_file($href)) {
+							if($v['thumb'] !== false) {
 								$dimensions .= '<br />'.$v['thumb']['infos'][0].' x '.$v['thumb']['infos'][1];
 							}
 						}
@@ -345,6 +328,28 @@ $curFolders = explode('/', $curFolder);
 
 </form>
 
+<?php /* ---------- les éléments suivants sont des boites modales --------------- */ ?>
+<!-- New Folder Dialog -->
+<div id="dlgNewFolder" class="dialog">
+	<div class="dialog-content">
+		<?php echo L_MEDIAS_NEW_FOLDER ?>
+		<input id="id_newfolder" type="text" name="newfolder" value="" maxlength="50" size="15" />
+		<input type="submit" name="btn_newfolder" value="<?php echo L_MEDIAS_CREATE_FOLDER ?>" />
+		<span class="dialog-close">🞭</span>
+	</div>
+</div>
+
+<!-- Rename File Dialog -->
+<div id="dlgRenameFile" class="dialog">
+	<div class="dialog-content">
+		<?php echo L_MEDIAS_NEW_NAME ?>
+		<input id="id_newname" type="text" name="newname" value="" maxlength="50" size="15" />
+		<input id="id_oldname" type="hidden" name="oldname" />
+		<input type="submit" name="btn_renamefile" value="<?php echo L_MEDIAS_RENAME ?>" />
+		<span class="dialog-close">🞭</span>
+	</div>
+</div>
+
 <div class="modal">
 	<div class="modal-overlay">
 		<div class="modal-box">
@@ -356,7 +361,7 @@ $curFolders = explode('/', $curFolder);
 		<div class="footer">
 			<div class="size" title="<?php echo L_MEDIAS_FILESIZE ?>">&nbsp;</div>
 			<div class="filename" title="<?php echo L_MEDIAS_LINK_COPYCLP; ?>" data-root="<?php echo PLX_ROOT;?>">&nbsp;</div>
-			<div class="counter">&nbsp;</div>
+			<div class="counter">🞭</div>
 		</div>
 	</div>
 </div>
@@ -376,9 +381,21 @@ function toggle_divs(){
 }
 (function() { // overlay
 	'use strict';
+
+	function dialogBox(id) {
+		const dlg = document.getElementById(id);
+		if(dlg == null) {
+			console.log('#' + id + ' element not found in "medias.php" file.');
+			return;
+		}
+		const closeBtn = dlg.querySelector('.dialog-close');
+		closeBtn.onclick = function(event) { dlg.classList.remove('active'); };
+		dlg.classList.add('active');
+	}
+
 	const imgs = Array.prototype.slice.call(document.querySelectorAll('img[data-src]'));
 	if(imgs.length > 0) {
-		const dialogBox = document.querySelector('.modal');
+		const modalBox = document.querySelector('.modal');
 		const closeBtn = document.querySelector('.modal button.closeBtn');
 		const prevBtn = document.querySelector('.modal button.prevBtn');
 		const nextBtn = document.querySelector('.modal button.nextBtn');
@@ -416,13 +433,13 @@ function toggle_divs(){
 			imgSrcList.push(item.getAttribute('data-src'));
 			item.addEventListener('click', function(event) {
 				setImgSrc(imgSrcList.indexOf(event.target.getAttribute('data-src')));
-				dialogBox.classList.add('active');
+				modalBox.classList.add('active');
 				event.preventDefault();
 			})
 		});
 
 		closeBtn.addEventListener('click', function(event) {
-			dialogBox.classList.remove('active');
+			modalBox.classList.remove('active');
 			event.preventDefault();
 		});
 		prevBtn.addEventListener('click', function(event) {
@@ -439,7 +456,7 @@ function toggle_divs(){
 		});
 
 		document.addEventListener('keydown', function(event) {
-			if(dialogBox.classList.contains('active')) {
+			if(modalBox.classList.contains('active')) {
 				if(!event.altKey && !event.ctrlKey && !event.shiftKey) {
 					switch(event.key) {
 						case 'ArrowLeft':
@@ -456,7 +473,7 @@ function toggle_divs(){
 							setImgSrc(imgSrcList.length - 1);
 							break;
 						case 'Escape' :
-							dialogBox.classList.remove('active');
+							modalBox.classList.remove('active');
 							break;
 						default:
 							return;
@@ -473,26 +490,34 @@ function toggle_divs(){
 				}
 			}
 		});
+
+		// gestion des icones du tableau de medias
+		document.getElementById('medias-table').addEventListener('click', function(event) {
+			const el = event.target;
+			if(el.tagName == 'I' && el.classList.contains('icon-media')) {
+				const a = el.parentElement.querySelector('a[href]');
+				if(a != null) {
+					event.preventDefault();
+					const value = a.href;
+					if(!el.hasAttribute('data-rename')) {
+						copyToClipboard(value);
+					} else {
+						// rename the file
+						document.getElementById('id_oldname').value = value;
+						dialogBox('dlgRenameFile');
+					}
+				}
+			}
+		});
 	}
+
+	document.getElementById('btnNewFolder').addEventListener('click', function(event) {
+		event.preventDefault();
+		dialogBox('dlgNewFolder');
+	});
+
 })();
-function copy(elt, data) {
-	try {
-		var div = elt.querySelector("div");
-		var aux = document.createElement("input");
-		aux.setAttribute("value", data);
-		document.body.appendChild(aux);
-		aux.select();
-		document.execCommand("copy");
-		document.body.removeChild(aux);
-		div.setAttribute("style", "display:inline-block");
-		t = setTimeout(function(){
-			div.setAttribute("style", "display:none");
-			clearTimeout(t);
-		}, 1000);
-	} catch (err) {
-		alert('<?php echo L_MEDIAS_LINK_COPYCLP_ERR ?>');
-	}
-}
+
 function plugFilter() {
 	var input, filter, table, tr, td, i;
 	filter = document.getElementById("medias-search").value;
