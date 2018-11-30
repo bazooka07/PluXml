@@ -40,6 +40,22 @@
 	margin-right: 0;
 }
 
+input[type="checkbox"].toggler {
+	display: none;
+}
+
+label[for][role="button"] {
+	display: inline-block;
+	padding: 0.3rem 0.7rem;
+	background-color: #777;
+	color: #fff;
+	border: 1px solid #bbb;
+	outline: 0;
+	border-radius: .3rem;
+	transition-duration: .2s;
+	cursor: pointer;
+}
+
 /* ---------- Aside ---------- */
 
 .aside {
@@ -270,6 +286,18 @@ textarea {
 input[maxlength="3"] {
 	width: 4rem !important;
 	text-align: right;
+}
+
+#id_toggle_medias + #form_medias { display: initial; }
+#id_toggle_medias + #form_medias + #form_uploader { display: none; }
+#id_toggle_medias:checked + #form_medias { display: none ; }
+#id_toggle_medias:checked + #form_medias + #form_uploader { display: initial; }
+
+label[for="id_toggle_medias"] {
+	margin: 0 2rem;
+}
+#form_uploader label[for="id_toggle_medias"] {
+	margin-left: 0;
 }
 
 #medias-table tbody tr {

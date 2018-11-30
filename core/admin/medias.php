@@ -120,21 +120,24 @@ $curFolders = explode('/', $curFolder);
 
 <?php eval($plxAdmin->plxPlugins->callHook('AdminMediasTop')) # Hook Plugins ?>
 
-<form action="medias.php" method="post" id="form_medias">
+<input type="checkbox" class="toggler" id="id_toggle_medias" />
+
+<form method="post" id="form_medias">
 
 	<div class="inline-form" id="files_manager">
 
 		<div class="inline-form action-bar">
 			<h2><?php echo L_MEDIAS_TITLE ?></h2>
-			<p>
+			<p id="fil-ariane-medias">
 				<?php
-				echo L_MEDIAS_DIRECTORY.' : <a href="javascript:void(0)" onclick="document.forms[0].folder.value=\'.\';document.forms[0].submit();return true;" title="'.L_PLXMEDIAS_ROOT.'">('.L_PLXMEDIAS_ROOT.')</a> / ';
+				// fil d'Ariane
+				echo L_MEDIAS_DIRECTORY.' : <a href="#" data=".">('.L_PLXMEDIAS_ROOT.')</a> / ';
 				if($curFolders) {
 					$path='';
 					foreach($curFolders as $id => $folder) {
 						if(!empty($folder) AND $id>1) {
 							$path .= $folder.'/';
-							echo '<a href="javascript:void(0)" onclick="document.forms[0].folder.value=\''.$path.'\';document.forms[0].submit();return true;" title="'.$folder.'">'.$folder.'</a> / ';
+							echo '<a href="#" data="'.$path.'">'.$folder.'</a> / ';
 						}
 					}
 				}
@@ -142,8 +145,7 @@ $curFolders = explode('/', $curFolder);
 			</p>
 			<?php plxUtils::printSelect('selection', $selectionList, '', false, 'no-margin', 'id_selection') ?>
 			<input type="submit" name="btn_ok" value="<?php echo L_OK ?>" onclick="return confirmAction(this.form, 'id_selection', 'delete', 'idFile[]', '<?php echo L_CONFIRM_DELETE ?>')" />
-			&nbsp;&nbsp;&nbsp;
-			<input type="submit" onclick="toggle_divs();return false" value="<?php echo L_MEDIAS_ADD_FILE ?>" />
+			<label for="id_toggle_medias" role="button"><?php echo L_MEDIAS_ADD_FILE ?></label>
 			<button id="btnNewFolder"><?php echo L_MEDIAS_NEW_FOLDER ?></button>
 			<?php if(!empty($_SESSION['folder'])) { ?>
 			&nbsp;&nbsp;&nbsp;<input type="submit" name="btn_delete" class="red" value="<?php echo L_DELETE_FOLDER ?>" onclick="return confirm('<?php printf(L_MEDIAS_DELETE_FOLDER_CONFIRM, $curFolder) ?>')" />
@@ -238,9 +240,9 @@ $curFolders = explode('/', $curFolder);
 	</div>
 </form>
 
-<form action="medias.php" method="post" id="form_uploader" class="form_uploader" enctype="multipart/form-data">
+<form method="post" id="form_uploader" class="form_uploader" enctype="multipart/form-data">
 
-	<div id="files_uploader" style="display:none">
+	<div id="files_uploader">
 
 		<div class="inline-form action-bar">
 			<h2 class="h4"><?php echo L_MEDIAS_TITLE ?></h2>
@@ -258,11 +260,10 @@ $curFolders = explode('/', $curFolder);
 				}
 				?>
 			</p>
+			<label for="id_toggle_medias" role="button"><?php echo L_MEDIAS_BACK ?></label>
 			<input type="submit" name="btn_upload" id="btn_upload" value="<?php echo L_MEDIAS_SUBMIT_FILE ?>" />
 			<?php echo plxToken::getTokenPostMethod() ?>
 		</div>
-
-		<p><a class="back" href="javascript:void(0)" onclick="toggle_divs();return false"><?php echo L_MEDIAS_BACK ?></a></p>
 
 		<p>
 			<?php echo L_MEDIAS_MAX_UPLOAD_NBFILE ?> : <?php echo ini_get('max_file_uploads') ?>
@@ -368,17 +369,6 @@ $curFolders = explode('/', $curFolder);
 <input id="clipboard-entry" type="text" />
 
 <script>
-function toggle_divs(){
-	var uploader = document.getElementById('files_uploader');
-	var manager = document.getElementById('files_manager');
-	if(uploader.style.display == 'none') {
-		uploader.style.display = 'block';
-		manager.style.display = 'none';
-	} else {
-		uploader.style.display = 'none';
-		manager.style.display = 'block';
-	}
-}
 (function() { // overlay
 	'use strict';
 
@@ -500,6 +490,7 @@ function toggle_divs(){
 					event.preventDefault();
 					const value = a.href;
 					if(!el.hasAttribute('data-rename')) {
+						// copy link into the clipboard
 						copyToClipboard(value);
 					} else {
 						// rename the file
@@ -511,10 +502,24 @@ function toggle_divs(){
 		});
 	}
 
+	// New directory
 	document.getElementById('btnNewFolder').addEventListener('click', function(event) {
 		event.preventDefault();
 		dialogBox('dlgNewFolder');
 	});
+
+	// Fil d'Ariane
+	const steps = document.querySelectorAll('#fil-ariane-medias a[data]');
+	for(var i=0, iMax=steps.length; i<iMax; i++) {
+		steps[i].addEventListener('click', function(event) {
+			event.preventDefault();
+			const frm = document.getElementById('form_medias');
+			if(frm != null) {
+				frm.elements.folder.value = event.target.getAttribute('data');
+				frm.submit();
+			}
+		});
+	}
 
 })();
 
@@ -543,10 +548,6 @@ if (typeof(Storage) !== "undefined" && localStorage.getItem("medias_search") !==
 	plugFilter();
 }
 
-function ImageRename(oldimg) {
-	document.getElementById('id_oldname').value = oldimg;
-	dialogBox("dlgRenameFile");
-}
 </script>
 
 <?php
