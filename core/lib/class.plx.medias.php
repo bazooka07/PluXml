@@ -149,9 +149,10 @@ class plxMedias {
 				}
 			}
 			$stats = stat($filename);
-			$files[basename($filename)] = array(
+			$name = basename($filename);
+			$files[$name] = array(
 				'.thumb'	=> $icon,
-				'name' 		=> basename($filename),
+				'name' 		=> $name,
 				'path' 		=> $filename,
 				'date' 		=> $stats['mtime'],
 				'filesize' 	=> $stats['size'],

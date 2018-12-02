@@ -4,7 +4,7 @@
  * Gestion des médias
  *
  * @package PLX
- * @author  Stephane F
+ * @author  Stephane F, J.P. Pourrez (2018-11)
  **/
 
 include __DIR__ .'/prepend.php';
@@ -166,40 +166,38 @@ $curFolders = explode('/', $curFolder);
 		</div>
 
 		<div class="scrollable-table">
-			<table id="medias-table" class="full-width">
+			<table id="medias-table" class="full-width" data-i18n='{"copyClp" : "<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>"}'>
 				<thead>
 				<tr>
-					<th class="checkbox"><input type="checkbox" onclick="checkAll(this.form, 'idFile[]')" /></th>
-					<th>&nbsp;</th>
-					<th><a href="javascript:void(0)" class="hcolumn" onclick="document.forms[0].sort.value='<?php echo $sort_title ?>';document.forms[0].submit();return true;"><?php echo L_MEDIAS_FILENAME ?></a></th>
-					<th><?php echo L_MEDIAS_EXTENSION ?></th>
-					<th><?php echo L_MEDIAS_FILESIZE ?></th>
-					<th><?php echo L_MEDIAS_DIMENSIONS ?></th>
-					<th><a href="javascript:void(0)" class="hcolumn" onclick="document.forms[0].sort.value='<?php echo $sort_date ?>';document.forms[0].submit();return true;"><?php echo L_MEDIAS_DATE ?></a></th>
+					<th class="checkbox" data-sort-method='none'><input type="checkbox" onclick="checkAll(this.form, 'idFile[]')" /></th>
+					<th data-sort-method='none'>&nbsp;</th>
+					<th data-medias-sort="<?php echo $sort_title; ?>"><span><?php echo L_MEDIAS_FILENAME ?></span></th>
+					<th><span><?php echo L_MEDIAS_EXTENSION ?></span></th>
+					<th data-sort-method='integer'><span><?php echo L_MEDIAS_FILESIZE ?></span></th>
+					<th data-sort-method='none'><?php echo L_MEDIAS_DIMENSIONS ?></th>
+					<th data-sort-method='integer' data-medias-sort="<?php echo $sort_date ?>"><span><?php echo L_MEDIAS_DATE ?></span></th>
 				</tr>
 				</thead>
 				<tbody>
 <?php
-				# Initialisation de l'ordre
-				$num = 0;
 				# Si on a des fichiers
 				if($plxMedias->aFiles) {
 					$offsetRoot = strlen(PLX_ROOT);
-					foreach($plxMedias->aFiles as $v) { # Pour chaque fichier
+					foreach($plxMedias->aFiles as $v) { /* ------------------ Boucle sur chaque media ---------------------- */
 						$isImage = preg_match('@\.(?:jpe?g|png|gif)$@i', $v['extension']);
-						$ordre = ++$num;
 						echo '<tr>';
 						echo '<td><input type="checkbox" name="idFile[]" value="'.$v['name'].'" /></td>';
 						echo '<td class="icon">';
-							if(is_file($v['path']) AND $isImage) {
-								echo '<img src="'.$v['.thumb'].'" title="'.plxUtils::strCheck($v['name']).'" data-src="'.$v['path'].'" class="thumb" />';
+							if(is_file($v['.thumb'])) {
+								$extra = ($isImage) ? ' data-src="'.$v['path'].'"' : '';
+								echo '<img src="'.$v['.thumb'].'" title="'.$v['name'].'" '.$extra.'class="thumb" width="48" height="48" />';
 							}
 						echo '</td>';
-						echo '<td>'.
+						echo '<td data-sort="'. $v['name'] .'">'.
 							'<div>'.
 								'<a class="imglink" href="'.$v['path'].'" target="_blank">'.$v['name'].'</a>'.
-								'<i class="icon-media" title="'.L_MEDIAS_LINK_COPYCLP.'">&#xf0ea;</i>'.
 								'<i class="icon-media" title="'.L_RENAME_FILE.'" data-rename>&#xe803;</i>'.
+								'<i class="icon-media" title="'.L_MEDIAS_LINK_COPYCLP.'">&#xf0ea;</i>'.
 								'</div>';
 							if($v['thumb'] !== false) {
 								$href = plxUtils::thumbName($v['path']);
@@ -211,7 +209,7 @@ $curFolders = explode('/', $curFolder);
 							}
 						echo '</td>';
 						echo '<td>'.substr($v['extension'],1).'</td>';
-						echo '<td>';
+						echo '<td data-sort="'. $v['filesize'] .'">';
 						echo plxUtils::formatFilesize($v['filesize']);
 						if($v['thumb'] !== false) {
 							echo '<br />'.plxUtils::formatFilesize($v['thumb']['filesize']);
@@ -227,11 +225,11 @@ $curFolders = explode('/', $curFolder);
 							}
 						}
 						echo '<td>'.$dimensions.'</td>';
-						echo '<td>'.plxDate::formatDate(plxDate::timestamp2Date($v['date'])).'</td>';
-						echo '</tr>';
+						echo '<td data-sort="'. $v['date'] .'">'.plxDate::formatDate(plxDate::timestamp2Date($v['date'])).'</td>';
+						echo "</tr>\n";
 					}
 				} else {
-					echo '<tr><td colspan="7" class="center">'.L_MEDIAS_NO_FILE.'</td></tr>';
+					echo '<tr><td colspan="7" class="center">'.L_MEDIAS_NO_FILE.'</td></tr>'."\n";
 				}
 ?>
 				</tbody>
@@ -368,205 +366,7 @@ $curFolders = explode('/', $curFolder);
 </div>
 <input id="clipboard-entry" type="text" />
 
-<script>
-(function() { // overlay
-	'use strict';
-
-	function dialogBox(id) {
-		const dlg = document.getElementById(id);
-		if(dlg == null) {
-			console.log('#' + id + ' element not found in "medias.php" file.');
-			return;
-		}
-		const closeBtn = dlg.querySelector('.dialog-close');
-		closeBtn.onclick = function(event) { dlg.classList.remove('active'); };
-		dlg.classList.add('active');
-	}
-
-	const imgs = Array.prototype.slice.call(document.querySelectorAll('img[data-src]'));
-	if(imgs.length > 0) {
-		const modalBox = document.querySelector('.modal');
-		const closeBtn = document.querySelector('.modal button.closeBtn');
-		const prevBtn = document.querySelector('.modal button.prevBtn');
-		const nextBtn = document.querySelector('.modal button.nextBtn');
-		const size = document.querySelector('.modal div.size');
-		const filename = document.querySelector('.modal div.filename');
-		const offset = (filename.hasAttribute('data-root')) ? filename.getAttribute('data-root').length : 0;
-		const counter = document.querySelector('.modal div.counter');
-		const img = document.querySelector('.modal .modal-box img');
-		img.onload = function(event) {
-			size.textContent = img.width + ' x ' + img.height;
-		};
-		var pos = null;
-		var imgSrcList = [];
-
-		function copyToClipboard(value) {
-			const entry = document.getElementById('clipboard-entry');
-			entry.value = value;
-			entry.select();
-			document.execCommand('copy');
-			alert('<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?> : \n' + value);
-		}
-
-		function setImgSrc(index) {
-			if(index < 0 || index > imgSrcList.length - 1) { return; }
-			pos = index;
-			var src = imgSrcList[pos];
-			img.src = src;
-			prevBtn.disabled = (pos <= 0);
-			nextBtn.disabled = (pos >= imgSrcList.length -1);
-			filename.textContent = (offset > 0) ? src.substring(offset) : src;
-			counter.textContent = (pos + 1) + ' / ' + imgSrcList.length;
-		}
-
-		imgs.forEach(function(item) {
-			imgSrcList.push(item.getAttribute('data-src'));
-			item.addEventListener('click', function(event) {
-				setImgSrc(imgSrcList.indexOf(event.target.getAttribute('data-src')));
-				modalBox.classList.add('active');
-				event.preventDefault();
-			})
-		});
-
-		closeBtn.addEventListener('click', function(event) {
-			modalBox.classList.remove('active');
-			event.preventDefault();
-		});
-		prevBtn.addEventListener('click', function(event) {
-			setImgSrc(pos - 1);
-			event.preventDefault();
-		});
-		nextBtn.addEventListener('click', function(event) {
-			setImgSrc(pos + 1);
-			event.preventDefault();
-		});
-		filename.addEventListener('click', function(event) {
-			copyToClipboard(this.textContent);
-			event.preventDefault();
-		});
-
-		document.addEventListener('keydown', function(event) {
-			if(modalBox.classList.contains('active')) {
-				if(!event.altKey && !event.ctrlKey && !event.shiftKey) {
-					switch(event.key) {
-						case 'ArrowLeft':
-							setImgSrc(pos - 1);
-							break;
-						case ' ':
-						case 'ArrowRight':
-							setImgSrc(pos + 1);
-							break;
-						case 'Home':
-							setImgSrc(0);
-							break;
-						case 'End':
-							setImgSrc(imgSrcList.length - 1);
-							break;
-						case 'Escape' :
-							modalBox.classList.remove('active');
-							break;
-						default:
-							return;
-							// console.log(event.key);
-					}
-					event.preventDefault();
-				} else if(event.ctrlKey && !event.shiftKey && event.key == 'c') {
-					var value = imgSrcList[pos].replace(/^(\.+\/)+/, '');
-					if(event.altKey) {
-						// On calcule l'url de la miniature
-						value = value.replace(/(\.(?:jpe?g|png|gif))$/, '.tb$1');
-					}
-					copyToClipboard(value);
-				}
-			}
-		});
-
-		// gestion des icones et de la recherche dans le tableau de medias
-		const mediasTable = document.getElementById('medias-table');
-		if(mediasTable != null) {
-			mediasTable.addEventListener('click', function(event) {
-				const el = event.target;
-				if(el.tagName == 'I' && el.classList.contains('icon-media')) {
-					const a = el.parentElement.querySelector('a[href]');
-					if(a != null) {
-						event.preventDefault();
-						const value = a.href;
-						if(!el.hasAttribute('data-rename')) {
-							// copy link into the clipboard
-							copyToClipboard(value);
-						} else {
-							// rename the file
-							document.getElementById('id_oldname').value = value;
-							dialogBox('dlgRenameFile');
-						}
-					}
-				}
-			});
-
-			// Look for a media
-			const STORAGE_KEY = 'medias_search';
-			var mediaRows = mediasTable.tBodies[0].rows;
-
-			function lookForMedias(value) {
-				for(var i=0, iMax=mediaRows.length; i<iMax; i++) {
-					if(!mediaRows[i].dataset.hasOwnProperty('media')) {
-						mediaRows[i].dataset.media = mediaRows[i].querySelector('a.imglink').textContent.toLowerCase();
-					}
-					if(mediaRows[i].dataset.media.indexOf(value) >= 0) {
-						mediaRows[i].classList.remove('hidden');
-					} else {
-						mediaRows[i].classList.add('hidden');
-					}
-				}
-			}
-
-			const searchInput = document.getElementById('medias-search');
-			if(searchInput != null) {
-				searchInput.onkeyup = function(event) {
-					event.preventDefault();
-					const value = event.target.value.toLowerCase();
-					lookForMedias(value);
-					if(typeof(localStorage) == 'object') {
-						if(value.length > 0) {
-							localStorage.setItem(STORAGE_KEY, value);
-						} else {
-							localStorage.removeItem(STORAGE_KEY);
-						}
-					}
-				};
-
-				if(typeof(localStorage) == 'object') {
-					const value = localStorage.getItem(STORAGE_KEY);
-					if(value != null) {
-						searchInput.value = value;
-						lookForMedias(value);
-					}
-				}
-			}
-		}
-	}
-
-	// New directory
-	document.getElementById('btnNewFolder').addEventListener('click', function(event) {
-		event.preventDefault();
-		dialogBox('dlgNewFolder');
-	});
-
-	// Fil d'Ariane
-	const steps = document.querySelectorAll('#fil-ariane-medias a[data]');
-	for(var i=0, iMax=steps.length; i<iMax; i++) {
-		steps[i].addEventListener('click', function(event) {
-			event.preventDefault();
-			const frm = document.getElementById('form_medias');
-			if(frm != null) {
-				frm.elements.folder.value = event.target.getAttribute('data');
-				frm.submit();
-			}
-		});
-	}
-
-})();
-</script>
+<script type="text/javascript" src="<?php echo PLX_CORE ?>lib/medias.js"></script>
 
 <?php
 # Hook Plugins
