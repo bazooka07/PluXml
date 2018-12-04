@@ -31,10 +31,10 @@ elseif(!empty($_POST['folder'])) {
 }
 
 # Tri de l'affichage des fichiers
-if(isset($_POST['sort']) AND !empty($_POST['sort'])) {
+if(!empty($_POST['sort']) AND preg_match('@^(?:title|date|filesize)_(?:a|de)sc$@')) {
 	$sort = $_POST['sort'];
 } else {
-	$sort = isset($_SESSION['sort_medias']) ? $_SESSION['sort_medias'] : 'title_asc';
+	$sort = (!empty($_SESSION['sort_medias'])) ? $_SESSION['sort_medias'] : 'title_asc';
 }
 
 # on précise l'ordre de tri des medias
@@ -57,8 +57,7 @@ if($plxAdmin->aConf['userfolders'] AND $_SESSION['profil']==PROFIL_WRITER)
 	$plxMediasRoot .= $_SESSION['user'].'/';
 $plxMedias = new plxMedias($plxMediasRoot, $_SESSION['folder'], $sort);
 
-#----
-
+# On traite le $_POST[..]
 if(!empty($_POST['btn_newfolder']) AND !empty($_POST['newfolder'])) {
 	$newdir = plxUtils::title2filename(trim($_POST['newfolder']));
 	if($plxMedias->newDir($newdir)) {
@@ -268,7 +267,7 @@ $curFolders = explode('/', $curFolder);
 		</p>
 
 		<div>
-			<input id="selector_0" type="file" multiple="multiple" name="selector_0[]" />
+			<input id="selector_0" type="file" multiple="multiple" name="selector_0[]" accept="image/*, audio/*, application/pdf, */*"/>
 			<div class="files_list" id="files_list" style="margin: 1rem 0 1rem 0;"></div>
 		</div>
 
