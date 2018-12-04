@@ -29,11 +29,33 @@ elseif(!empty($_POST['folder'])) {
 	$_SESSION['currentfolder']= (isset($_SESSION['folder'])?$_SESSION['folder']:'');
 	$_SESSION['folder'] = ($_POST['folder']=='.'?'':$_POST['folder']);
 }
+
+# Tri de l'affichage des fichiers
+if(isset($_POST['sort']) AND !empty($_POST['sort'])) {
+	$sort = $_POST['sort'];
+} else {
+	$sort = isset($_SESSION['sort_medias']) ? $_SESSION['sort_medias'] : 'title_asc';
+}
+
+# on précise l'ordre de tri des medias
+$sort_title = 'title_desc';
+$sort_date = 'date_desc';
+$sort_filesize = 'filesize_desc';
+switch ($sort) {
+	case 'title_asc'		: $sort_title = 'title_desc'; break;
+	case 'date_asc'			: $sort_date = 'date_desc'; break;
+	case 'date_desc'		: $sort_date = 'date_asc'; break;
+	case 'filesize_asc'		: $sort_filesize = 'filesize_desc'; break;
+	case 'filesize_desc'	: $sort_filesize = 'filesize_asc'; break;
+	default					: $sort_title = 'title_asc';
+}
+$_SESSION['sort_medias'] = $sort;
+
 # Nouvel objet de type plxMedias
 $plxMediasRoot = PLX_ROOT.$_SESSION['medias'];
 if($plxAdmin->aConf['userfolders'] AND $_SESSION['profil']==PROFIL_WRITER)
 	$plxMediasRoot .= $_SESSION['user'].'/';
-$plxMedias = new plxMedias($plxMediasRoot, $_SESSION['folder']);
+$plxMedias = new plxMedias($plxMediasRoot, $_SESSION['folder'], $sort);
 
 #----
 
@@ -62,50 +84,22 @@ elseif(!empty($_POST['btn_upload'])) {
 	header('Location: medias.php');
 	exit;
 }
-elseif(isset($_POST['selection']) AND ((!empty($_POST['btn_ok']) AND $_POST['selection']=='delete')) AND isset($_POST['idFile'])) {
-	$plxMedias->deleteFiles($_POST['idFile']);
-	header('Location: medias.php');
-	exit;
+elseif(!empty($_POST['selection']) AND !empty($_POST['idFile']) AND !empty($_POST['btn_ok'])) {
+	switch($_POST['selection']) {
+		case 'delete':
+			$plxMedias->deleteFiles($_POST['idFile']);
+			header('Location: medias.php');
+			exit;
+		case 'move':
+			$plxMedias->moveFiles($_POST['idFile'], $_SESSION['currentfolder'], $_POST['folder']);
+			header('Location: medias.php');
+			exit;
+		case 'thumbs':
+			$plxMedias->makeThumbs($_POST['idFile'], $plxAdmin->aConf['miniatures_l'], $plxAdmin->aConf['miniatures_h']);
+			header('Location: medias.php');
+			exit;
+	}
 }
-elseif(isset($_POST['selection']) AND ((!empty($_POST['btn_ok']) AND $_POST['selection']=='move')) AND isset($_POST['idFile'])) {
-	$plxMedias->moveFiles($_POST['idFile'], $_SESSION['currentfolder'], $_POST['folder']);
-	header('Location: medias.php');
-	exit;
-}
-elseif(isset($_POST['selection']) AND ((!empty($_POST['btn_ok']) AND $_POST['selection']=='thumbs')) AND isset($_POST['idFile'])) {
-	$plxMedias->makeThumbs($_POST['idFile'], $plxAdmin->aConf['miniatures_l'], $plxAdmin->aConf['miniatures_h']);
-	header('Location: medias.php');
-	exit;
-}
-
-# Tri de l'affichage des fichiers
-if(isset($_POST['sort']) AND !empty($_POST['sort'])) {
-	$sort = $_POST['sort'];
-} else {
-	$sort = isset($_SESSION['sort_medias']) ? $_SESSION['sort_medias'] : 'title_asc';
-}
-
-$sort_title = 'title_desc';
-$sort_date = 'date_desc';
-switch ($sort) {
-	case 'title_asc':
-		$sort_title = 'title_desc';
-		usort($plxMedias->aFiles, create_function('$b, $a', 'return strcmp($a["name"], $b["name"]);'));
-		break;
-	case 'title_desc':
-		$sort_title = 'title_asc';
-		usort($plxMedias->aFiles, create_function('$a, $b', 'return strcmp($a["name"], $b["name"]);'));
-		break;
-	case 'date_asc':
-		$sort_date = 'date_desc';
-		usort($plxMedias->aFiles, create_function('$b, $a', 'return strcmp($a["date"], $b["date"]);'));
-		break;
-	case 'date_desc':
-		$sort_date = 'date_asc';
-		usort($plxMedias->aFiles, create_function('$a, $b', 'return strcmp($a["date"], $b["date"]);'));
-		break;
-}
-$_SESSION['sort_medias']=$sort;
 
 # Contenu des 2 listes déroulantes
 $selectionList = array(''=>L_FOR_SELECTION,'move'=>L_PLXMEDIAS_MOVE_FOLDER,'thumbs'=>L_MEDIAS_RECREATE_THUMB,'-'=>'-----','delete' =>L_DELETE_FILE);
@@ -122,6 +116,7 @@ $curFolders = explode('/', $curFolder);
 
 <input type="checkbox" class="toggler" id="id_toggle_medias" />
 
+<?php /* --------------- Tableau des medias ------------ */ ?>
 <form method="post" id="form_medias">
 
 	<div class="inline-form" id="files_manager">
@@ -147,18 +142,18 @@ $curFolders = explode('/', $curFolder);
 			<input type="submit" name="btn_ok" value="<?php echo L_OK ?>" onclick="return confirmAction(this.form, 'id_selection', 'delete', 'idFile[]', '<?php echo L_CONFIRM_DELETE ?>')" />
 			<label for="id_toggle_medias" role="button"><?php echo L_MEDIAS_ADD_FILE ?></label>
 			<button id="btnNewFolder"><?php echo L_MEDIAS_NEW_FOLDER ?></button>
-			<?php if(!empty($_SESSION['folder'])) { ?>
-			&nbsp;&nbsp;&nbsp;<input type="submit" name="btn_delete" class="red" value="<?php echo L_DELETE_FOLDER ?>" onclick="return confirm('<?php printf(L_MEDIAS_DELETE_FOLDER_CONFIRM, $curFolder) ?>')" />
-			<?php } ?>
+<?php if(!empty($_SESSION['folder'])) { ?>
+				&nbsp;&nbsp;&nbsp;<input type="submit" name="btn_delete" class="red" value="<?php echo L_DELETE_FOLDER ?>" onclick="return confirm('<?php printf(L_MEDIAS_DELETE_FOLDER_CONFIRM, $curFolder) ?>')" />
+<?php } ?>
 			<input type="hidden" name="sort" value="" />
 			<?php echo plxToken::getTokenPostMethod() ?>
 		</div>
 
 		<div class="header">
 			<div>
-				<?php echo L_MEDIAS_FOLDER ?>&nbsp;:&nbsp;
+				<?php echo L_MEDIAS_FOLDER ?>
 				<?php echo $plxMedias->contentFolder() ?>
-				<input type="submit" name="btn_changefolder" value="<?php echo L_OK ?>" />&nbsp;&nbsp;&nbsp;&nbsp;
+				<input type="submit" name="btn_changefolder" value="<?php echo L_OK ?>" />
 			</div>
 			<div>
 				<input type="text" id="medias-search" placeholder="<?php echo L_SEARCH ?>..." title="<?php echo L_SEARCH ?>" />
@@ -166,36 +161,36 @@ $curFolders = explode('/', $curFolder);
 		</div>
 
 		<div class="scrollable-table">
-			<table id="medias-table" class="full-width" data-i18n='{"copyClp" : "<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>"}'>
+			<table id="medias-table" class="full-width" data-i18n='{"copyClp" : "<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>"}' data-medias-sort="<?php echo $sort; ?>">
 				<thead>
-				<tr>
-					<th class="checkbox" data-sort-method='none'><input type="checkbox" onclick="checkAll(this.form, 'idFile[]')" /></th>
-					<th data-sort-method='none'>&nbsp;</th>
-					<th data-medias-sort="<?php echo $sort_title; ?>"><span><?php echo L_MEDIAS_FILENAME ?></span></th>
-					<th><span><?php echo L_MEDIAS_EXTENSION ?></span></th>
-					<th data-sort-method='integer'><span><?php echo L_MEDIAS_FILESIZE ?></span></th>
-					<th data-sort-method='none'><?php echo L_MEDIAS_DIMENSIONS ?></th>
-					<th data-sort-method='integer' data-medias-sort="<?php echo $sort_date ?>"><span><?php echo L_MEDIAS_DATE ?></span></th>
-				</tr>
+					<tr>
+						<th class="checkbox" data-sort-method='none'><input type="checkbox" onclick="checkAll(this.form, 'idFile[]')" /></th>
+						<th data-sort-method='none'>&nbsp;</th>
+						<th data-medias-sort="<?php echo $sort_title; ?>"><span><?php echo L_MEDIAS_FILENAME ?></span></th>
+						<th><span><?php echo L_MEDIAS_EXTENSION ?></span></th>
+						<th data-sort-method='integer' data-medias-sort="<?php echo $sort_filesize; ?>"><span><?php echo L_MEDIAS_FILESIZE ?></span></th>
+						<th data-sort-method='none'><?php echo L_MEDIAS_DIMENSIONS ?></th>
+						<th data-sort-method='integer' data-medias-sort="<?php echo $sort_date ?>"><span><?php echo L_MEDIAS_DATE ?></span></th>
+					</tr>
 				</thead>
 				<tbody>
 <?php
 				# Si on a des fichiers
 				if($plxMedias->aFiles) {
 					$offsetRoot = strlen(PLX_ROOT);
-					foreach($plxMedias->aFiles as $v) { /* ------------------ Boucle sur chaque media ---------------------- */
+					foreach($plxMedias->aFiles as $name=>$v) { /* ------------------ Boucle sur chaque media ---------------------- */
 						$isImage = preg_match('@\.(?:jpe?g|png|gif)$@i', $v['extension']);
 						echo '<tr>';
-						echo '<td><input type="checkbox" name="idFile[]" value="'.$v['name'].'" /></td>';
+						echo '<td><input type="checkbox" name="idFile[]" value="'.$name.'" /></td>';
 						echo '<td class="icon">';
 							if(is_file($v['.thumb'])) {
 								$extra = ($isImage) ? ' data-src="'.$v['path'].'"' : '';
-								echo '<img src="'.$v['.thumb'].'" title="'.$v['name'].'" '.$extra.'class="thumb" width="48" height="48" />';
+								echo '<img src="'.$v['.thumb'].'" title="'.$name.'" '.$extra.'class="thumb" width="48" height="48" />';
 							}
 						echo '</td>';
-						echo '<td data-sort="'. $v['name'] .'">'.
+						echo '<td data-sort="'. $name .'">'.
 							'<div>'.
-								'<a class="imglink" href="'.$v['path'].'" target="_blank">'.$v['name'].'</a>'.
+								'<a class="imglink" href="'.$v['path'].'" target="_blank">'.$name.'</a>'.
 								'<i class="icon-media" title="'.L_RENAME_FILE.'" data-rename>&#xe803;</i>'.
 								'<i class="icon-media" title="'.L_MEDIAS_LINK_COPYCLP.'">&#xf0ea;</i>'.
 								'</div>';
@@ -238,6 +233,7 @@ $curFolders = explode('/', $curFolder);
 	</div>
 </form>
 
+<?php /* ----------- Téléversement des fichiers -------- */ ?>
 <form method="post" id="form_uploader" class="form_uploader" enctype="multipart/form-data">
 
 	<div id="files_uploader">
@@ -258,7 +254,7 @@ $curFolders = explode('/', $curFolder);
 				}
 				?>
 			</p>
-			<label for="id_toggle_medias" role="button"><?php echo L_MEDIAS_BACK ?></label>
+			<label for="id_toggle_medias" role="button">← <?php echo L_MEDIAS_BACK ?></label>
 			<input type="submit" name="btn_upload" id="btn_upload" value="<?php echo L_MEDIAS_SUBMIT_FILE ?>" />
 			<?php echo plxToken::getTokenPostMethod() ?>
 		</div>
@@ -327,8 +323,9 @@ $curFolders = explode('/', $curFolder);
 
 </form>
 
-<?php /* ---------- les éléments suivants sont des boites modales --------------- */ ?>
-<!-- New Folder Dialog -->
+<?php /* ==== les éléments suivants sont des boites modales ==== */ ?>
+
+<?php /* -------------- New Folder Dialog ------------------ */ ?>
 <div id="dlgNewFolder" class="dialog">
 	<div class="dialog-content">
 		<?php echo L_MEDIAS_NEW_FOLDER ?>
@@ -338,7 +335,7 @@ $curFolders = explode('/', $curFolder);
 	</div>
 </div>
 
-<!-- Rename File Dialog -->
+<?php /* --------------- Rename File Dialog ---------------- */ ?>
 <div id="dlgRenameFile" class="dialog">
 	<div class="dialog-content">
 		<?php echo L_MEDIAS_NEW_NAME ?>
@@ -349,6 +346,7 @@ $curFolders = explode('/', $curFolder);
 	</div>
 </div>
 
+<?php /* ---------------------- Diaporama ------------------ */ ?>
 <div class="modal">
 	<div class="modal-overlay">
 		<div class="modal-box">
@@ -364,6 +362,7 @@ $curFolders = explode('/', $curFolder);
 		</div>
 	</div>
 </div>
+
 <input id="clipboard-entry" type="text" />
 
 <script type="text/javascript" src="<?php echo PLX_CORE ?>lib/medias.js"></script>

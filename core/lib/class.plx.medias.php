@@ -32,11 +32,12 @@ class plxMedias {
 	 * @return	null
 	 * @author	Stephane F
 	 **/
-	public function __construct($path, $dir) {
+	public function __construct($path, $dir, $sort='title_asc') {
 
 		# Initialisation
 		$this->path = $path;
 		$this->dir = $dir;
+		$this->sort = $sort;
 
 		# Création du dossier réservé à l'utilisateur connecté s'il n'existe pas
 		if(!is_dir($this->path)) {
@@ -154,15 +155,23 @@ class plxMedias {
 				'.thumb'	=> $icon,
 				'name' 		=> $name,
 				'path' 		=> $filename,
-				'date' 		=> $stats['mtime'],
-				'filesize' 	=> $stats['size'],
+				'date' 		=> $stats['mtime'], // integer
+				'filesize' 	=> $stats['size'], // integer
 				'extension'	=> '.' . $ext,
 				'infos' 	=> $imgSize,
 				'thumb' 	=> $thumbInfos
 			);
 		}
 
-		ksort($files);
+		switch($this->sort) {
+			case 'title_desc'	: krsort($files); break;
+			case 'date_asc'		: uasort($files, function($a, $b) { return ($a['date'] - $b['date']); }); break;
+			case 'date_desc'	: uasort($files, function($b, $a) { return ($a['date'] - $b['date']); }); break;
+			case 'filesize_asc'	: uasort($files, function($a, $b) { return ($a['filesize'] - $b['filesize']); }); break;
+			case 'filesize_desc': uasort($files, function($b, $a) { return ($a['filesize'] - $b['filesize']); }); break;
+			default: ksort($files);
+		}
+
 		return $files;
 	}
 

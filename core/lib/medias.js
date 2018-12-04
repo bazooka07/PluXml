@@ -199,7 +199,19 @@
 				}
 			);
 
-			const sort = new Tablesort(mediasTable);
+			// Icon after loading the HTML page
+			var descending = 'ascending';
+			const mediasSort = mediasTable.getAttribute('data-medias-sort');
+			if(mediasSort != null) {
+				const parts = mediasSort.split('_');
+				const col = mediasTable.querySelector('thead th[data-medias-sort^="' + parts[0] + '"]');
+				if(col != null) {
+					col.setAttribute('data-sort-default', '');
+					if(parts[1] == 'desc') { descending = 'descending'; }
+				}
+			}
+
+			const sort = new Tablesort(mediasTable, { descending: descending });
 			this.table.addEventListener('afterSort', function(event) {
 				const form = document.getElementById('form_medias');
 				if(form != null) {
@@ -209,13 +221,12 @@
 						const order = col.getAttribute('aria-sort').replace(/ending$/, '');
 						const value = parts[0] + '_' + order;
 						form.elements.sort.value = value;
-						console.log('Medias order by ' + value);
+						// console.log('Medias order by ' + value);
 					}
 				} else {
 					console.log('#form_medias element not found');
 				}
 			});
-
 		});
 		// var src = 'https://raw.github.com/tristen/tablesort/gh-pages/dist/tablesort.min.js';
 		var src = document.scripts[document.scripts.length-1].src.replace(/[^/]*\.js$/, 'tablesort.min.js');
