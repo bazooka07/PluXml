@@ -478,45 +478,23 @@ class plxUtils {
 	 **/
 	public static function makeThumb($src_image, $dest_image, $thumb_width = 48, $thumb_height = 48, $jpg_quality = 90) {
 
-		if(!function_exists('imagecreatetruecolor')) return false;
+		if(!function_exists('imagecreatetruecolor')) { return false; }
 
 		// Get dimensions of existing image
 		$image = getimagesize($src_image);
 
 		// Check for valid dimensions
-		if($image[0] <= 0 || $image[1] <= 0) return false;
-
-		// Determine format from MIME-Type
-		$image['format'] = strtolower(preg_replace('/^.*?\//', '', $image['mime']));
-
-		// calcul du ration si nécessaire
-		if($thumb_width!=$thumb_height) {
-			# Calcul du ratio
-			$x_offset = $y_offset = 0;
-			$square_size_w = $image[0];
-			$square_size_h = $image[1];
-			$ratio_w = $thumb_width / $image[0];
-			$ratio_h = $thumb_height / $image[1];
-			if($thumb_width == 0)
-				$thumb_width = $image[0] * $ratio_h;
-			elseif($thumb_height == 0)
-				$thumb_height = $image[1] * $ratio_w;
-			elseif($ratio_w < $ratio_h AND $ratio_w < 1) {
-				$thumb_width = $ratio_w * $image[0];
-				$thumb_height = $ratio_w * $image[1];
-			} elseif($ratio_h < 1) {
-				$thumb_width = $ratio_h * $image[0];
-				$thumb_height = $ratio_h * $image[1];
-			} else {
-				$thumb_width = $image[0];
-				$thumb_height = $image[1];
-			}
-		}
+		if($image[0] <= 0 || $image[1] <= 0) { return false; }
 
 		$canvas = imagecreatetruecolor($thumb_width, $thumb_height);
 
+		// Determine format from MIME-Type
+		$src_format = strtolower(preg_replace('/^.*?\//', '', $image['mime']));
+		if(!preg_match('@^(?:jpe?g|png|gif)$@', $src_format)) { return false; }
+
 		// Import image
-		switch( $image['format'] ) {
+		// format wpeg
+		switch($src_format) {
 			case 'jpg':
 			case 'jpeg':
 				$image_data = imagecreatefromjpeg($src_image);
@@ -537,60 +515,65 @@ class plxUtils {
 				return false; // Unsupported format
 			break;
 		}
-
 		// Verify import
 		if($image_data == false) return false;
 
-		// Calculate measurements (square crop)
-		if($thumb_width==$thumb_height) {
-			if($image[0] > $image[1]) {
-				// For landscape images
-				$x_offset = ($image[0] - $image[1]) / 2;
-				$y_offset = 0;
-				$square_size_w = $square_size_h = $image[0] - ($x_offset * 2);
+		# Calcul du ratio
+		$offset_w = $offset_h = 0;
+		$square_size_w = $image[0];
+		$square_size_h = $image[1];
+		# ratio largeur/hauteur de l'image source $src_image
+		$img_ratio = $square_size_w / $square_size_h;
+		if(empty($thumb_width)) {
+			# la largeur de la vignette n'est pas précisée
+			$thumb_width = intval($img_ratio * $square_size_h);
+		} elseif(empty($thumb_height)) {
+			# la largeur de la vignette n'est pas précisée
+			$thumb_height = intval($img_ratio / $square_size_w);
+		} else {
+			# l'image source doit être recoupée (crop)
+			$thumb_ratio = $thumb_width / $thumb_height;
+			if($thumb_ratio < $img_ratio) {
+				# l'image source est proportionnellement plus large que la vignette
+				$old_w = $square_size_w; // ancienne largeur de $src_image
+				$square_size_w = $square_size_h  * $thumb_ratio;
+				$offset_w = intval(($old_w - $square_size_w) / 2);
 			} else {
-				// For portrait and square images
-				$x_offset = 0;
-				$y_offset = ($image[1] - $image[0]) / 2;
-				$square_size_w = $square_size_h = $image[1] - ($y_offset * 2);
+				# l'image source est proportionnellement plus haute que la vignette
+				$old_h = $square_size_h;  // ancienne hauteur de $src_image
+				$square_size_h = $square_size_w / $thumb_ratio;
+				$offset_h = intval(($old_h - $square_size_h));
 			}
 		}
 
 		// Resize and crop
+		$success = false;
 		if( imagecopyresampled(
 			$canvas,
 			$image_data,
-			0,
-			0,
-			$x_offset,
-			$y_offset,
-			$thumb_width,
-			$thumb_height,
-			$square_size_w,
-			$square_size_h
+			0, 0, # point d'origine sur le canvas
+			$offset_w, $offset_h, # point d'origine dans l'image source
+			$thumb_width, $thumb_height, # dimensions du canvas
+			$square_size_w, $square_size_h # dimensions de l'image source retaillée
 		)) {
 
 			// Create thumbnail
-			switch( strtolower(preg_replace('/^.*\./', '', $dest_image)) ) {
-				case 'jpg':
-				case 'jpeg':
-					return (imagejpeg($canvas, $dest_image, $jpg_quality) AND is_file($dest_image));
-				break;
-				case 'png':
-					return (imagepng($canvas, $dest_image) AND is_file($dest_image));
-				break;
-				case 'gif':
-					return (imagegif($canvas, $dest_image) AND is_file($dest_image));
-				break;
-				default:
-					return false; // Unsupported format
-				break;
+			switch( strtolower(strrchr($dest_image, '.')) ) {
+				case '.jpg':
+				case '.jpeg':
+					$success = (imagejpeg($canvas, $dest_image, $jpg_quality) AND is_file($dest_image));
+					break;
+				case '.png':
+					$success = (imagepng($canvas, $dest_image) AND is_file($dest_image));
+					break;
+				case '.gif':
+					$success = (imagegif($canvas, $dest_image) AND is_file($dest_image));
+					break;
 			}
-
-		} else {
-			return false;
 		}
-
+		imagedestroy($image_data);
+		imagedestroy($canvas);
+		return $success;
 	}
 
 	/**

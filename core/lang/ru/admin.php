@@ -337,7 +337,7 @@ $LANG = array(
 'L_MEDIAS_LINK_COPYCLP_DONE'                                => 'ссылка скопирована',
 'L_MEDIAS_NEW_NAME'											=> 'Новое имя',
 'L_MEDIAS_RENAME'											=> 'Переименование',
-
+'L_MEDIAS_DROP_CLICK'										=> 'Перетащите сюда файлы или выберите',
 
 # parametres_affichage.php
 

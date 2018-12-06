@@ -31,7 +31,7 @@ elseif(!empty($_POST['folder'])) {
 }
 
 # Tri de l'affichage des fichiers
-if(!empty($_POST['sort']) AND preg_match('@^(?:title|date|filesize)_(?:a|de)sc$@')) {
+if(!empty($_POST['sort']) AND preg_match('@^(?:title|date|filesize)_(?:a|de)sc$@', $_POST['sort'])) {
 	$sort = $_POST['sort'];
 } else {
 	$sort = (!empty($_SESSION['sort_medias'])) ? $_SESSION['sort_medias'] : 'title_asc';
@@ -53,8 +53,9 @@ $_SESSION['sort_medias'] = $sort;
 
 # Nouvel objet de type plxMedias
 $plxMediasRoot = PLX_ROOT.$_SESSION['medias'];
-if($plxAdmin->aConf['userfolders'] AND $_SESSION['profil']==PROFIL_WRITER)
+if($plxAdmin->aConf['userfolders'] AND $_SESSION['profil'] >= PROFIL_WRITER) {
 	$plxMediasRoot .= $_SESSION['user'].'/';
+}
 $plxMedias = new plxMedias($plxMediasRoot, $_SESSION['folder'], $sort);
 
 # On traite le $_POST[..]
@@ -78,8 +79,9 @@ elseif(!empty($_POST['folder']) AND $_POST['folder']!='.' AND !empty($_POST['btn
 	header('Location: medias.php');
 	exit;
 }
-elseif(!empty($_POST['btn_upload'])) {
-	$plxMedias->uploadFiles($_FILES, $_POST);
+elseif(!empty($_FILES)) {
+	$plxMedias->uploadMultiFiles('selector');
+	$_SESSION['sort_medias'] = 'date_desc';
 	header('Location: medias.php');
 	exit;
 }
@@ -232,7 +234,14 @@ $curFolders = explode('/', $curFolder);
 	</div>
 </form>
 
-<?php /* ----------- Téléversement des fichiers -------- */ ?>
+<?php  ?>
+<?php
+/* ----------- Téléversement des fichiers -------- *\
+ * for debugging, set at the root of the site, the script variables.php which contains the following line :
+ * <?php phpinfo(INFO_VARIABLE); ?>
+ * and add in the <form> tag : action="<?php echo PLX_ROOT; ?>variables.php"
+ * */
+?>
 <form method="post" id="form_uploader" class="form_uploader" enctype="multipart/form-data">
 
 	<div id="files_uploader">
@@ -240,7 +249,7 @@ $curFolders = explode('/', $curFolder);
 		<div class="inline-form action-bar">
 			<h2 class="h4"><?php echo L_MEDIAS_TITLE ?></h2>
 			<p>
-				<?php
+<?php
 				echo L_MEDIAS_DIRECTORY.' : ('.L_PLXMEDIAS_ROOT.') / ';
 				if($curFolders) {
 					$path='';
@@ -251,44 +260,70 @@ $curFolders = explode('/', $curFolder);
 						}
 					}
 				}
-				?>
+?>
 			</p>
 			<label for="id_toggle_medias" role="button">← <?php echo L_MEDIAS_BACK ?></label>
-			<input type="submit" name="btn_upload" id="btn_upload" value="<?php echo L_MEDIAS_SUBMIT_FILE ?>" />
+			<input type="submit" name="btn_upload" id="btn_upload" value="<?php echo L_MEDIAS_SUBMIT_FILE ?>" disabled />
 			<?php echo plxToken::getTokenPostMethod() ?>
 		</div>
 
-		<p>
-			<?php echo L_MEDIAS_MAX_UPLOAD_NBFILE ?> : <?php echo ini_get('max_file_uploads') ?>
- 		</p>
-		<p>
-			<?php echo L_MEDIAS_MAX_UPLOAD_FILE ?> : <?php echo $plxMedias->maxUpload['display'] ?>
-			<?php if($plxMedias->maxPost['value'] > 0) echo " / ".L_MEDIAS_MAX_POST_SIZE." : ".$plxMedias->maxPost['display']; ?>
-		</p>
+		<div id="upload-limits">
+<?php
+	$uploadLimits = array(
+		'max_file_uploads'		=> L_MEDIAS_MAX_UPLOAD_NBFILE,
+		'upload_max_filesize'	=> L_MEDIAS_MAX_UPLOAD_FILE,
+		'post_max_size'			=> L_MEDIAS_MAX_POST_SIZE
+	);
+	foreach($uploadLimits as $key=>$caption) {
+		$value = ini_get($key);
+		$valueStr = strtr($value, array(
+			'K'	=> 'Ko',
+			'M' => 'Mo',
+			'G'	=> 'Go'
+		));
+		if(preg_match('@\s*(\d+)\s*(K|M|G)$@', $value, $matches)) {
+			$units = array(
+				'K' => '1024',
+				'M'	=> '1048576', // 1024*1024
+				'G'	=> '1073741824' // 1024*1024*1024
+			);
+			$valueInt = intval($matches[1]) * $units[$matches[2]];
+		} else {
+			$valueInt = intval($value);
+		}
+		echo <<< ITEM
+			<p><span>$caption</span> : <span id="$key" data-value="$valueInt" title="$valueInt bytes">$valueStr</span></p>\n
+ITEM;
+	}
+?>
+			<progress id="post-load" value="0" min="0" max="100"></progress>
+		</div>
 
-		<div>
-			<input id="selector_0" type="file" multiple="multiple" name="selector_0[]" accept="image/*, audio/*, application/pdf, */*"/>
-			<div class="files_list" id="files_list" style="margin: 1rem 0 1rem 0;"></div>
+		<div id="upload-area">
+			<input type="file" id="selector" name="selector[]" multiple accept="image/*, audio/*, application/pdf, text/*, */*"/>
+			<p><?php echo L_MEDIAS_DROP_CLICK; ?></p>
+			<div class="files_list" id="files_list" data-icons-path="<?php echo plxMedias::ICONS_PATH; ?>" data-icon-exts="<?php echo $plxMedias->iconExts('|'); ?>"></div>
 		</div>
 
 		<div class="grid">
 			<div class="col sma-12 med-4">
 				<ul class="unstyled-list">
 					<li><?php echo L_MEDIAS_RESIZE ?>&nbsp;:&nbsp;</li>
-					<li><input type="radio" checked="checked" name="resize" value="" />&nbsp;<?php echo L_MEDIAS_RESIZE_NO ?></li>
+					<li><input type="radio" checked="checked" name="img_new" />&nbsp;<?php echo L_MEDIAS_RESIZE_NO ?></li>
 					<?php
 						foreach($img_redim as $redim) {
-							echo '<li><input type="radio" name="resize" value="'.$redim.'" />&nbsp;'.$redim.'</li>';
+							echo '<li><input type="radio" name="img_new" value="'.$redim.'" />&nbsp;'.$redim.'</li>';
 						}
+						$user_value = intval($plxAdmin->aConf['images_l' ]).'x'.intval($plxAdmin->aConf['images_h' ]);
 					?>
 					<li>
-						<input type="radio" name="resize" value="<?php echo intval($plxAdmin->aConf['images_l' ]).'x'.intval($plxAdmin->aConf['images_h' ]) ?>" />&nbsp;<?php echo intval($plxAdmin->aConf['images_l' ]).'x'.intval($plxAdmin->aConf['images_h' ]) ?>
+						<input type="radio" name="img_new" value="<?php echo $user_value; ?>" />&nbsp;<?php echo $user_value; ?>
 						&nbsp;&nbsp;(<a href="parametres_affichage.php"><?php echo L_MEDIAS_MODIFY ?>)</a>
 					</li>
 					<li>
-						<input type="radio" name="resize" value="user" />&nbsp;
-						<input type="text" size="2" maxlength="4" name="user_w" />&nbsp;x&nbsp;
-						<input type="text" size="2" maxlength="4" name="user_h" />
+						<input type="radio" name="img_new" value="user" />&nbsp;
+						<input type="text" size="2" maxlength="4" name="img_new_w" />&nbsp;x&nbsp;
+						<input type="text" size="2" maxlength="4" name="img_new_h" />
 					</li>
 				</ul>
 			</div>
@@ -297,22 +332,23 @@ $curFolders = explode('/', $curFolder);
 					<li><?php echo L_MEDIAS_THUMBS ?>&nbsp;:&nbsp;</li>
 					<li>
 						<?php $sel = (!$plxAdmin->aConf['thumbs'] ? ' checked="checked"' : '') ?>
-						<input<?php echo $sel ?> type="radio" name="thumb" value="" />&nbsp;<?php echo L_MEDIAS_THUMBS_NONE ?>
+						<input <?php echo $sel ?> type="radio" name="thumb_new" value="" />&nbsp;<?php echo L_MEDIAS_THUMBS_NONE ?>
 					</li>
 					<?php
 						foreach($img_thumb as $thumb) {
-							echo '<li><input type="radio" name="thumb" value="'.$thumb.'" />&nbsp;'.$thumb.'</li>';
+							echo '<li><input type="radio" name="thumb_new" value="'.$thumb.'" />&nbsp;'.$thumb.'</li>';
 						}
+						$user_value = intval($plxAdmin->aConf['miniatures_l' ]).'x'.intval($plxAdmin->aConf['miniatures_h' ]);
 					?>
 					<li>
 						<?php $sel = ($plxAdmin->aConf['thumbs'] ? ' checked="checked"' : '') ?>
-						<input<?php echo $sel ?> type="radio" name="thumb" value="<?php echo intval($plxAdmin->aConf['miniatures_l' ]).'x'.intval($plxAdmin->aConf['miniatures_h' ]) ?>" />&nbsp;<?php echo intval($plxAdmin->aConf['miniatures_l' ]).'x'.intval($plxAdmin->aConf['miniatures_h' ]) ?>
+						<input <?php echo $sel ?> type="radio" name="thumb_new" value="<?php echo $user_value; ?>" />&nbsp;<?php echo $user_value; ?>
 						&nbsp;&nbsp;(<a href="parametres_affichage.php"><?php echo L_MEDIAS_MODIFY ?>)</a>
 					</li>
 					<li>
-						<input type="radio" name="thumb" value="user" />&nbsp;
-						<input type="text" size="2" maxlength="4" name="thumb_w" />&nbsp;x&nbsp;
-						<input type="text" size="2" maxlength="4" name="thumb_h" />
+						<input type="radio" name="thumb_new" value="user" />&nbsp;
+						<input type="text" size="2" maxlength="4" name="thumb_new_w" />&nbsp;x&nbsp;
+						<input type="text" size="2" maxlength="4" name="thumb_new_h" />
 					</li>
 				</ul>
 			</div>

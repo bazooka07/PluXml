@@ -8,21 +8,48 @@
  **/
 class plxMedias {
 
+	 // http://www.iana.org/assignments/media-types/media-types.xhtml
+	const IMG_MIMETYPES = '@^image/(?:jpe?g|png|gif)$@i';
+	const COMMON_MIMETYPES = '@^(?:image|audio|video|text)/@i';
+	const APP_MIMETYPES = '@^application/(?:'.
+		'pdf|'.
+		'vnd.openxmlformats|'.
+		'vnd.oasis.opendocument|'.
+		'vnd.ms-|'.
+		'zip|'.
+		'gzip|'.
+		'rar|'.
+		'x-gtar|'.
+		'x-tar|'.
+		'x-xcf|'.
+		'epub+zip|'.
+		'vnd.sun.xml|'.
+		'x-shockwave-flash|'.
+		'x-7z-compressed'.
+		')@i';
+
+	const ICONS_PATH = PLX_CORE.'admin/theme/exts/48/';
 	public $path = null; # chemin vers les médias
 	public $dir = null;
 	public $aDirs = array(); # liste des dossiers et sous dossiers
 	public $aFiles = array(); # liste des fichiers d'un dossier
+	private $new_sizes = array( # dimensions pour les nouvelles images et vignettes
+		'img_new'	=> array('w'=> false, 'h'=>false),
+		'thumb_new'	=> array('w'=> false, 'h'=>false)
+	);
+	/*
 	public $maxUpload = array(); # valeur upload_max_filesize
 	public $maxPost = array(); # valeur post_max_size
+	* */
 
 	/*
 	public $thumbQuality = 60; # qualité image
 	public $thumbWidth = 60; # largeur des miniatures
 	public $thumbHeight = 60; # hauteur des miniatures
-	* */
 
 	public $img_exts = '/\.(jpe?g|png|gif|bmp)$/i';
 	public $doc_exts = '/\.(7z|aiff|asf|avi|csv|docx?|epub|fla|flv|gz|gzip|m4a|m4v|mid|mov|mp3|mp4|mpc|mpe?g|ods|odt|odp|ogg|pdf|pptx?|ppt|pxd|qt|ram|rar|rm|rmi|rmvb|rtf|svg|swf|sxc|sxw|tar|tgz|txt|vtt|wav|webm|wma|wmv|xcf|xlsx?|zip)$/i';
+	* */
 
 	/**
 	 * Constructeur qui initialise la variable de classe
@@ -52,6 +79,7 @@ class plxMedias {
 		$this->aDirs = $this->_getAllDirs();
 		$this->aFiles = $this->_getDirFiles($this->dir);
 
+		/*
 		# Taille maxi des fichiers
 		$maxUpload = strtoupper(ini_get("upload_max_filesize"));
 		$this->maxUpload['display'] = str_replace('M', ' Mo', $maxUpload);
@@ -69,7 +97,7 @@ class plxMedias {
 		elseif(substr_count($maxPost, 'M')) $this->maxPost['value'] = str_replace('M', '', $maxPost) * 1024 * 1024;
 		elseif(substr_count($maxPost, 'G')) $this->maxPost['value'] = str_replace('G', '', $maxPost) * 1024 * 1024 * 1024;
 		else $this->maxPost['value'] = 0;
-
+		*/
 	}
 
 	/**
@@ -109,7 +137,6 @@ class plxMedias {
 		$src = $this->path.$dir;
 		if(!is_dir($src)) return array();
 
-		$iconsPath = PLX_CORE.'admin/theme/exts/48/';
 		$offset = strlen($this->path);
 		$files = array();
 		foreach(array_filter(
@@ -120,7 +147,7 @@ class plxMedias {
 
 			$thumbInfos = false;
 			$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-			$icon = $iconsPath.'_blank.png';
+			$icon = self::ICONS_PATH.'_blank.png';
 			if(preg_match('@\.(jpe?g|png|gif)$@i', $filename, $matches)) {
 				# Youpi! We catch a picture
 				$thumbName = plxUtils::thumbName($filename);
@@ -144,7 +171,7 @@ class plxMedias {
 			} else {
 				# No picture
 				$imgSize = false;
-				$iconFilename = $iconsPath.rtrim($ext, 'x').'.png'; // rtrim() is a hack against Microsoft
+				$iconFilename = self::ICONS_PATH.rtrim($ext, 'x').'.png'; // rtrim() is a hack against Microsoft
 				if(file_exists($iconFilename)) {
 					$icon = $iconFilename;
 				}
@@ -313,112 +340,116 @@ STOP;
 	}
 
 	/**
-	 * Méthode qui envoie un fichier sur le serveur
-	 *
-	 * @param	file	fichier à uploader
-	 * @param	resize	taille du fichier à redimensionner si renseigné
-	 * @param	thumb	taille de la miniature à créer si renseigné
-	 * @return  msg		message contenant le résultat de l'envoi du fichier
-	 * @author	Stephane F
-	 **/
-	private function _uploadFile($file, $resize, $thumb) {
-
-		if($file['name'] == '')
-			return false;
-
-		if($file['size'] > $this->maxUpload['value'])
-			return L_PLXMEDIAS_WRONG_FILESIZE;
-
-		if(!preg_match($this->img_exts, $file['name']) AND !preg_match($this->doc_exts, $file['name']))
-			return L_PLXMEDIAS_WRONG_FILEFORMAT;
-
-		# On teste l'existence du fichier et on formate le nom du fichier pour éviter les doublons
-		$i = 1;
-		$upFile = $this->path.$this->dir.plxUtils::title2filename($file['name']);
-		$name = substr($file['name'], 0, strrpos($file['name'],'.'));
-		$ext = strrchr($upFile, '.');
-		while(file_exists($upFile)) {
-			$upFile = $this->path.$this->dir.$name.'.'.$i++.$ext;
-		}
-
-		if(!move_uploaded_file($file['tmp_name'],$upFile)) { # Erreur de copie
-			return L_PLXMEDIAS_UPLOAD_ERR;
-		} else { # Ok
-			if(preg_match($this->img_exts, $file['name'])) {
-				plxUtils::makeThumb($upFile, $this->path.'.thumbs/'.$this->dir.basename($upFile), 48, 48);
-				if($resize)
-					plxUtils::makeThumb($upFile, $upFile, $resize['width'], $resize['height'], 80);
-				if($thumb)
-					plxUtils::makeThumb($upFile, plxUtils::thumbName($upFile), $thumb['width'], $thumb['height'], 80);
+	 * Méthode qui déplace, redimensionne et miniaturise une nouvelle image.
+	 * @param	tmp_location	Emplacement temporaire
+	 * @param	new_name		nom du nouveau fichier
+	 * @author	J.P. Pourrez (bazooka07) 2018-12-05
+	 * */
+	private function __move_uploaded_image($tmp_location, $new_name) {
+		$success = plxUtils::makeThumb($tmp_location, $this->path.'.thumbs/'.$this->dir.$new_name, 48, 48, 75);
+		$path1 = $this->path.$this->dir;
+		foreach(array('thumb', 'img') as $k) { // travailler d'abord sur la vignette avant de déplacer l'image
+			if(!empty($this->new_sizes[$k.'_new']['w']) or !empty($this->new_sizes[$k.'_new']['h'])) {
+				$target = ($k == 'img') ? $new_name : plxUtils::thumbName($new_name);
+				if(!plxUtils::makeThumb($tmp_location, $path1.$target, $this->new_sizes[$k.'_new']['w'], $this->new_sizes[$k.'_new']['h'])) {
+					// impossible de redimensionner une image
+					$success = false;
+				}
+				if($k == 'img') {
+					unlink($tmp_location);
+				}
+			} elseif($k == 'img') {
+				// Déplace seulement l'image
+				if(!move_uploaded_file($tmp_location, $path1.$new_name)) {
+					// Unable to move the new file. We have an error
+					$success = false;
+				}
 			}
 		}
-		return L_PLXMEDIAS_UPLOAD_SUCCESSFUL;
+		return $success;
 	}
 
 	/**
-	 * Méthode qui envoie une liste de fichiers sur le serveur
+	 * Méthode qui installe un lot de fichiers sur le serveur.
 	 *
-	 * @param	usrfiles 	fichiers utilisateur à uploader
-	 * @param	post		paramètres
-	 * @return  msg			résultat de l'envoi des fichiers
-	 * @author	Stephane F
+	 * @param	name 		nom de l'élément du formulaire pour : <input type="file" name="$name" multiple />
+	 * @return  msg			résultat de l'installation
+	 * @author	J.P. Pourrez (bazooka07) 2018-12-05
 	 **/
-	public function uploadFiles($usrfiles, $post) {
+	public function uploadMultiFiles($name) {
+		if(!empty($name) and !empty($_FILES[$name])) {
 
-		$files = array();
-		if(isset($post['myfiles'])) {
-			foreach($post['myfiles'] as $key => $val) {
-				list($selnum, $selval) = explode('_', $val);
-				$files[] = array(
-					'name'		=> $usrfiles['selector_'.$selnum]['name'][$selval],
-					'size'		=> $usrfiles['selector_'.$selnum]['size'][$selval],
-					'tmp_name'	=> $usrfiles['selector_'.$selnum]['tmp_name'][$selval]
-				);
+			// for resizing and thumbnail
+			$pattern = '@^[1-9]\d*x[1-9]\d*$@';
+			$this->new_sizes = array();
+			foreach(array('img_new', 'thumb_new') as $field) {
+				$this->new_sizes[$field] = array('w' => false, 'h' => false);
+				if(!empty($_POST[$field])) {
+					if($_POST[$field] == 'user') {
+						foreach(array('w', 'h') as $direction) {
+							$k = $field.'_'.$direction;
+							if(!empty($_POST[$k])) {
+								$this->new_sizes[$field][$direction] = $_POST[$k];
+							}
+						}
+					} elseif(preg_match($pattern, $_POST[$field])) {
+						list($this->new_sizes[$field]['w'], $this->new_sizes[$field]['h']) = explode('x', $_POST[$field]);
+					}
+				}
+			}
+
+			$success = true;
+			for($i=0, $iMax=count($_FILES[$name]['name']); $i<$iMax; $i++) {
+				if($_FILES[$name]['error'][$i] == 0) {
+					if($_FILES[$name]['size'][$i] > 0) {
+						$tmp_location = $_FILES[$name]['tmp_name'][$i];
+						$tmp_name = $_FILES[$name]['name'][$i]; // nom actuel du fichier
+
+						// vérifie si un fichier a déjà le même nom
+						if(!file_exists($this->dir.$tmp_name)) {
+							$new_name = $tmp_name;
+						} else {
+							$name = substr($tmp_name, 0, strrpos($tmp_name, '.'));
+							$ext = strrchr($tmp_name, '.');
+							$i = 1;
+							$new_name = "$name.$i$ext";
+							while(file_exists($this->dir.$new_name)) {
+								$i++;
+								$new_name = "$name.$i$ext";
+							}
+						}
+
+						// check the mimetype
+						$mimetype = $_FILES[$name]['type'][$i];
+						if(preg_match(self::IMG_MIMETYPES, $mimetype)) {
+							// we have an image
+							if(!$this->__move_uploaded_image($tmp_location, $new_name)) {
+								// Unable to move the new file. We have an error
+							}
+						} elseif(preg_match(self::COMMON_MIMETYPES, $mimetype) or preg_match(self::APP_MIMETYPES, $mimetype)) {
+							if(!move_uploaded_file($tmp_location, $this->path.$this->dir.$new_name)) {
+								// Unable to move the new file. We have an error
+								plxMsg::Error(L_PLXMEDIAS_UPLOAD_ERR);
+								$success = false;
+							}
+						} else {
+							// bad format
+							plxMsg::Error(L_PLXMEDIAS_WRONG_FILEFORMAT);
+							$success = false;
+						}
+					} else {
+						plxMsg::Error(L_PLXMEDIAS_WRONG_FILESIZE);
+						$success = false;
+					}
+				} else {
+					plxMsg::Error(L_PLXMEDIAS_UPLOAD_ERR);
+					$success = false;
+				}
+			}
+			if($success) {
+				plxMsg::Info((count($_FILES[$name]['name']) > 1) ? L_PLXMEDIAS_UPLOADS_SUCCESSFUL : L_PLXMEDIAS_UPLOAD_SUCCESSFUL);
 			}
 		}
-
-		$count=0;
-		foreach($files as $file) {
-			$resize = false;
-			$thumb = false;
-			if(!empty($post['resize'])) {
-				if($post['resize']=='user') {
-					$resize = array('width' => intval($post['user_w']), 'height' => intval($post['user_h']));
-				} else {
-					list($width,$height) = explode('x', $post['resize']);
-					$resize = array('width' => $width, 'height' => $height);
-				}
-			}
-			if(!empty($post['thumb'])) {
-				if($post['thumb']=='user') {
-					$thumb = array('width' => intval($post['thumb_w']), 'height' => intval($post['thumb_h']));
-				} else {
-					list($width,$height) = explode('x', $post['thumb']);
-					$thumb = array('width' => $width, 'height' => $height);
-				}
-			}
-			if($res=$this->_uploadFile($file, $resize, $thumb)) {
-				switch($res) {
-					case L_PLXMEDIAS_WRONG_FILESIZE:
-						return plxMsg::Error(L_PLXMEDIAS_WRONG_FILESIZE);
-						break;
-					case L_PLXMEDIAS_WRONG_FILEFORMAT:
-						return plxMsg::Error(L_PLXMEDIAS_WRONG_FILEFORMAT);
-						break;
-					case L_PLXMEDIAS_UPLOAD_ERR:
-						return plxMsg::Error(L_PLXMEDIAS_UPLOAD_ERR);
-						break;
-					case L_PLXMEDIAS_UPLOAD_SUCCESSFUL:
-						$count++;
-						break;
-				}
-			}
-		}
-
-		if($count==1)
-			return plxMsg::Info(L_PLXMEDIAS_UPLOAD_SUCCESSFUL);
-		elseif($count>1)
-			return plxMsg::Info(L_PLXMEDIAS_UPLOADS_SUCCESSFUL);
 	}
 
 	/**
@@ -562,6 +593,15 @@ STOP;
 		else
 			return plxMsg::Error(L_RENAME_FILE_ERR);
 
+	}
+
+	public function iconExts($implode=false) {
+		$files = array_map(function($item) {
+				return basename($item, '.png');
+			},
+			glob(self::ICONS_PATH.'*.png')
+		);
+		return (!empty($implode)) ? implode('|', $files) : $files;
 	}
 }
 ?>

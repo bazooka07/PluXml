@@ -12,6 +12,13 @@
 # ------------------- END LICENSE BLOCK -------------------
 */
 
+@-webkit-keyframes animation-blink {
+  50% { background-color: red; }
+}
+@keyframes animation-blink {
+  50% { background-color: red; }
+}
+
 /* ---------- Authentication ---------- */
 
 .logo {
@@ -359,6 +366,67 @@ label[for="id_toggle_medias"] {
 	color: #fff;
 	cursor: pointer;
 }
+
+#upload-area {
+	position: relative;
+}
+#selector {
+	width: 100%;
+}
+#upload-area > p {
+	position: absolute;
+	top: 0;
+	width: 100%;
+	margin: 0;
+	padding: 0.5rem;
+	background-color: #eee;
+	text-align: right;
+	z-index: -1;
+}
+#selector {
+	border: 2px solid transparent;
+}
+#selector.drag {
+	border-color: green;
+}
+#files_list {
+	margin: 0.5rem 0 0;
+	padding: 0;
+	min-height: 16rem;
+}
+#files_list > p {
+	text-align: center;
+	font-size: 200%;
+}
+#files_list figure {
+	display: inline-block;
+	margin: .2rem .4rem;
+	max-width: 15rem;
+	padding: 0.2rem;
+	text-align: center;
+	background-color: #eee;
+	border: 3px solid transparent;
+}
+#files_list figure.big-size {
+	border-color: red;
+}
+#files_list img {
+	max-height: 10rem;
+}
+#files_list figcaption {
+	overflow-x: hidden;
+	background-color: #fff;
+	font-size: 80%;
+}
+#files_list figcaption p {
+	margin: 0;
+	white-space: nowrap;
+}
+#upload-progress {
+	width: 100%;
+	height: 0.8rem;
+}
+
 #plugins-table img ,
 #medias-table img {
 	max-width: initial !important;
@@ -387,6 +455,40 @@ label[for="id_toggle_medias"] {
 	text-align: center;
 }
 
+#upload-limits {
+	margin-top: 2rem;
+}
+#post-load {
+	width: 100%;
+	height: 0.8rem;
+	vertical-align: top;
+	margin-top: 0;
+}
+@media screen and (min-width:64rem) {
+	#upload-limits {
+		position: fixed;
+		top: 1rem;
+		right: 1rem;
+		width: 37rem;
+		z-index: 20;
+	}
+}
+
+#upload-limits p {
+	margin: 0;
+}
+#upload-limits span {
+	padding: 0 0.5rem;
+}
+#upload-limits span:first-of-type {
+	display: inline-block;
+	width: 30rem;
+}
+#upload-limits span.blink {
+	color: #fff;
+	-webkit-animation: animation-blink 1s linear infinite;
+	animation: animation-blink 1s linear infinite;
+}
 .publication input {
 	font-weight: bold;
 	color: #777;

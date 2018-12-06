@@ -61,13 +61,13 @@ function checkAll(inputs, field) {
 }
 function confirmAction(inputs, selfield, selvalue, field, msg) {
 	if(document.getElementById(selfield).value==selvalue) {
-		var action = false;
+		var count = 0;
 		for(var i = 0; i < inputs.elements.length; i++) {
-			if(inputs[i].type == "checkbox" && inputs[i].name==field) {
-				if(inputs[i].checked) { action=true }
+			if(inputs[i].type == "checkbox" && inputs[i].name == field) {
+				if(inputs[i].checked) { count++; }
 			}
 		}
-		return (action ? confirm(msg) : false);
+		return (count > 0) ? confirm(msg.replace(/%d/, count)) : false;
 	}
 }
 function toggleDiv(divId,togglerId,on,off){

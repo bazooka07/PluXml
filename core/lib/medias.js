@@ -257,3 +257,104 @@
 	}
 
 })();
+
+// uploading files
+(function() {
+
+	// https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/file
+	function returnFilesize(value) {
+		if(value < 1024) { return value + 'B'; }
+		if(value < 1048576) { return (value / 1024).toFixed(1) + 'KB'; }
+		return (value / 1048576).toFixed(1) + 'MB';
+	}
+
+	const inputFiles = document.getElementById('selector');
+	const filesList = document.getElementById('files_list');
+	const iconsPath = filesList.getAttribute('data-icons-path');
+	const iconExts =  filesList.getAttribute('data-icon-exts');
+	const progressBar = document.getElementById('upload-progress');
+	const progressLoad = document.getElementById('post-load');
+	var limits = {};
+	'max_file_uploads, upload_max_filesize, post_max_size'.split(/\s*,\s*/).forEach(function(key) {
+		const el = document.getElementById(key);
+		limits[key] = (el != null && el.hasAttribute('data-value')) ? parseInt(el.getAttribute('data-value')) : -1;
+	});
+
+	if(inputFiles != null) {
+		const exts = (iconExts != null) ? iconExts.split('|') : null;
+		inputFiles.addEventListener('change', function(event) {
+			filesList.innerHTML = '';
+			var filesCount = 0;
+			var filesSum = 0;
+			var badFilesSize = 0;
+			var disabledForm = false;
+			for(var i=0, iMax=inputFiles.files.length; i<iMax; i++) {
+				const curFile = inputFiles.files[i];
+				const fig = document.createElement('FIGURE');
+
+				// teste la taille des fichiers
+				if(limits.upload_max_filesize > 0 && curFile.size > limits.upload_max_filesize) {
+					fig.classList.add('big-size');
+					disabledForm = true;
+				}
+
+				// tester si mimetype = image
+				const ext = curFile.name.replace(/.*\.(\w+)$/, '$1');
+				const img = document.createElement('IMG');
+				if(/^image\/(?:jpe?g|png|svg\+xml|gif)/.test(curFile.type)) {
+					img.src = window.URL.createObjectURL(curFile);
+				} else if(exts != null && exts.indexOf(ext) >= 0) {
+					img.src = iconsPath + ext + '.png';
+				} else {
+					img.src = iconsPath + '_blank.png';
+				}
+				fig.appendChild(img);
+
+				const figCaption = document.createElement('FIGCAPTION');
+
+				const filename = document.createElement('p');
+				filename.textContent = curFile.name;
+				filename.title = curFile.name;
+				filename.className = 'divtitle';
+				figCaption.appendChild(filename);
+
+				const sizeElt = document.createElement('p');
+				sizeElt.textContent = returnFilesize(curFile.size);
+				figCaption.appendChild(sizeElt);
+				fig.appendChild(figCaption);
+
+				filesList.appendChild(fig);
+
+				filesCount++;
+				filesSum += curFile.size;
+			}
+			if(limits.max_file_uploads > 0 && filesCount > limits.max_file_uploads) {
+				document.getElementById('max_file_uploads').classList.add('blink');
+				disabledForm = true;
+			}
+			var load = 100;
+			if(limits.post_max_size > 0) {
+				if(filesSum > limits.post_max_size) {
+					document.getElementById('post_max_size').classList.add('blink');
+					disabledForm = true;
+				} else {
+					load = parseInt(100.0 * filesSum / limits.post_max_size);
+				}
+				// Progressbar for the size of post datas
+				progressLoad.value = load;
+			}
+
+			document.getElementById('btn_upload').disabled = disabledForm;
+		});
+
+		inputFiles.form.onprogress = function(event) {
+			console.log('form progress');
+			console.log(this.loaded);
+			console.log(this.total);
+		}
+
+		inputFiles.ondragenter = function(event) { this.classList.add('drag'); }
+		inputFiles.ondragexit = function(event)      { this.classList.remove('drag'); }
+		inputFiles.ondrop = function(event)      { this.classList.remove('drag'); }
+	}
+})();

@@ -5,7 +5,7 @@ $LANG = array(
 'L_ID' 								=> 'N°',
 'L_MENU'							=> 'Menu',
 'L_UNKNOWN_ERROR'					=> 'Erreur inconnue',
-'L_CONFIRM_DELETE'					=> 'Confirmer la suppression ?',
+'L_CONFIRM_DELETE'					=> 'Confirmer la suppression\nde %d éléments ?',
 'L_SAVE_FILE'						=> 'Sauvegarder le fichier',
 'L_SAVE_FILE_SUCCESSFULLY'			=> 'Fichier enregistré avec succès',
 'L_SAVE_FILE_ERROR'					=> 'Erreur pendant l\'enregistrement du fichier',
@@ -338,6 +338,7 @@ $LANG = array(
 'L_MEDIAS_LINK_COPYCLP_DONE'        => 'Lien copié',
 'L_MEDIAS_NEW_NAME'					=> 'Nouveau nom',
 'L_MEDIAS_RENAME'					=> 'Renommer',
+'L_MEDIAS_DROP_CLICK'				=> 'Déposez des fichiers ici ou cliquez pour sélectionner',
 
 # parametres_affichage.php
 

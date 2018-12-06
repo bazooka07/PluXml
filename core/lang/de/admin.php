@@ -281,6 +281,7 @@ $LANG = array(
 'L_MEDIAS_LINK_COPYCLP_DONE'                        => 'Link kopiert',
 'L_MEDIAS_NEW_NAME'									=> 'Neuer Name',
 'L_MEDIAS_RENAME'									=> 'Umbenennen',
+'L_MEDIAS_DROP_CLICK'								=> 'Drop-Dateien hier oder klicken Sie auf wählen',
 'L_SORT_ASCENDING_DATE'								=> 'Datum aufsteigend',
 'L_SORT_DESCENDING_DATE'							=> 'Datum absteigend',
 'L_SORT_ALPHABETICAL'								=> 'alphabetisch',
