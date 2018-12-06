@@ -165,7 +165,7 @@ $curFolders = explode('/', $curFolder);
 			<table id="medias-table" class="full-width" data-i18n='{"copyClp" : "<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>"}' data-medias-sort="<?php echo $sort; ?>">
 				<thead>
 					<tr>
-						<th class="checkbox" data-sort-method='none'><input type="checkbox" onclick="checkAll(this.form, 'idFile[]')" /></th>
+						<th class="checkbox" data-sort-method='none'><input type="checkbox" onclick="return checkAll(this.form, 'idFile[]');" /></th>
 						<th data-sort-method='none'>&nbsp;</th>
 						<th data-medias-sort="<?php echo $sort_title; ?>"><span><?php echo L_MEDIAS_FILENAME ?></span></th>
 						<th><span><?php echo L_MEDIAS_EXTENSION ?></span></th>

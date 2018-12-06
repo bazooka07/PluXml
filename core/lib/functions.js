@@ -52,24 +52,28 @@ function addText(where, open, close) {
 	}
 	return;
 }
-function checkAll(inputs, field) {
-	for(var i = 0; i < inputs.elements.length; i++) {
-		if(inputs[i].type == "checkbox" && inputs[i].name==field) {
-			inputs[i].checked = !inputs[i].checked ;
+function checkAll(form1, fieldname) {
+	const elts = form1.elements[fieldname]; // tableau
+	for(var i=0, iMax=elts.length; i<iMax; i++) {
+		if(elts[i].value.trim().length > 0) {
+			elts[i].checked = true;
 		}
 	}
+	return false;
 }
-function confirmAction(inputs, selfield, selvalue, field, msg) {
-	if(document.getElementById(selfield).value==selvalue) {
-		var count = 0;
-		for(var i = 0; i < inputs.elements.length; i++) {
-			if(inputs[i].type == "checkbox" && inputs[i].name == field) {
-				if(inputs[i].checked) { count++; }
-			}
+function confirmAction(form1, idField, selvalue, fieldname, msg) {
+	if(document.getElementById(idField).value != selvalue) { return false; }
+
+	const elts = form1.elements[fieldname]; // tableau
+	var count = 0;
+	for(var i=0, iMax=elts.length; i<iMax; i++) {
+		if(elts[i].type == 'checkbox' && elts[i].checked) {
+			count++;
 		}
-		return (count > 0) ? confirm(msg.replace(/%d/, count)) : false;
 	}
+	return (count > 0) ? confirm(msg.replace(/%d/, count)) : false;
 }
+
 function toggleDiv(divId,togglerId,on,off){
 	var toggler = document.getElementById(togglerId);
 	if(document.getElementById(divId).style.display == 'none') {
