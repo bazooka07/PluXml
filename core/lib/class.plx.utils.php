@@ -480,17 +480,66 @@ class plxUtils {
 
 		if(!function_exists('imagecreatetruecolor')) { return false; }
 
+		// Pas de vignette avec dimensions nulles dans les deux directions
+		if($thumb_width == 0 and $thumb_height == 0) { return false; }
+
 		// Get dimensions of existing image
 		$image = getimagesize($src_image);
 
 		// Check for valid dimensions
 		if($image[0] <= 0 || $image[1] <= 0) { return false; }
 
-		$canvas = imagecreatetruecolor($thumb_width, $thumb_height);
-
-		// Determine format from MIME-Type
+		// Détermine format from MIME-Type
 		$src_format = strtolower(preg_replace('/^.*?\//', '', $image['mime']));
 		if(!preg_match('@^(?:jpe?g|png|gif)$@', $src_format)) { return false; }
+
+		# Calcul du ratio
+		$offset_w = $offset_h = 0;
+		$square_size_w = $image[0];
+		$square_size_h = $image[1];
+
+		if($square_size_w < $thumb_width and $square_size_h < $thumb_height and $src_format == strtolower(strrchr($dest_image, '.'))) {
+			# image plus petite que le thumbnail et même format
+			copy($src_image, $dest_image);
+			return true;
+		}
+
+		if($thumb_width > $square_size_w) { $thumb_width = $square_size_w; }
+		if($thumb_height > $square_size_h) { $thumb_height = $square_size_h; }
+
+		# ratio largeur/hauteur de l'image source $src_image
+		$img_ratio = $square_size_w / $square_size_h;
+		if(empty($thumb_width)) {
+			# la largeur de la vignette n'est pas précisée
+			$thumb_width = intval($thumb_height * $img_ratio);
+		} elseif(empty($thumb_height)) {
+			# la hauteur de la vignette n'est pas précisée
+			$thumb_height = intval($thumb_width / $img_ratio);
+		} elseif($thumb_width != $thumb_height) {
+			# La vignette n'est pas carrée : On la redimensionne
+			if($thumb_width < $thumb_height * $img_ratio) {
+				# la vignette est plus haute que l'image source
+				$thumb_height = intval($thumb_width / $img_ratio);
+			} else {
+				# la vignette est plus large que l'image source
+				$thumb_width = intval($thumb_height * $img_ratio);
+			}
+		} else {
+			# Vignette carrée : on recoupe l'image source (crop)
+			if($img_ratio > 1) {
+				# l'image source est proportionnellement plus large que la vignette
+				$old_w = $square_size_w; // ancienne largeur de $src_image
+				$square_size_w = $square_size_h;
+				$offset_w = intval(($old_w - $square_size_w) / 2);
+			} else {
+				# l'image source est proportionnellement plus haute que la vignette
+				$old_h = $square_size_h;  // ancienne hauteur de $src_image
+				$square_size_h = $square_size_w;
+				$offset_h = intval(($old_h - $square_size_h) / 2);
+			}
+		}
+
+		$canvas = imagecreatetruecolor($thumb_width, $thumb_height);
 
 		// Import image
 		// format wpeg
@@ -517,34 +566,6 @@ class plxUtils {
 		}
 		// Verify import
 		if($image_data == false) return false;
-
-		# Calcul du ratio
-		$offset_w = $offset_h = 0;
-		$square_size_w = $image[0];
-		$square_size_h = $image[1];
-		# ratio largeur/hauteur de l'image source $src_image
-		$img_ratio = $square_size_w / $square_size_h;
-		if(empty($thumb_width)) {
-			# la largeur de la vignette n'est pas précisée
-			$thumb_width = intval($img_ratio * $square_size_h);
-		} elseif(empty($thumb_height)) {
-			# la largeur de la vignette n'est pas précisée
-			$thumb_height = intval($img_ratio / $square_size_w);
-		} else {
-			# l'image source doit être recoupée (crop)
-			$thumb_ratio = $thumb_width / $thumb_height;
-			if($thumb_ratio < $img_ratio) {
-				# l'image source est proportionnellement plus large que la vignette
-				$old_w = $square_size_w; // ancienne largeur de $src_image
-				$square_size_w = $square_size_h  * $thumb_ratio;
-				$offset_w = intval(($old_w - $square_size_w) / 2);
-			} else {
-				# l'image source est proportionnellement plus haute que la vignette
-				$old_h = $square_size_h;  // ancienne hauteur de $src_image
-				$square_size_h = $square_size_w / $thumb_ratio;
-				$offset_h = intval(($old_h - $square_size_h));
-			}
-		}
 
 		// Resize and crop
 		$success = false;

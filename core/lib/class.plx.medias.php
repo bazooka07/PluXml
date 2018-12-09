@@ -389,11 +389,13 @@ STOP;
 						foreach(array('w', 'h') as $direction) {
 							$k = $field.'_'.$direction;
 							if(!empty($_POST[$k])) {
-								$this->new_sizes[$field][$direction] = $_POST[$k];
+								$this->new_sizes[$field][$direction] = intval($_POST[$k]);
 							}
 						}
 					} elseif(preg_match($pattern, $_POST[$field])) {
-						list($this->new_sizes[$field]['w'], $this->new_sizes[$field]['h']) = explode('x', $_POST[$field]);
+						list($w, $h) = explode('x', $_POST[$field]);
+						$this->new_sizes[$field]['w'] = intval($w);
+						$this->new_sizes[$field]['h'] = intval($h);
 					}
 				}
 			}

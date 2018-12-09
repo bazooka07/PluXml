@@ -82,6 +82,14 @@ elseif(!empty($_POST['folder']) AND $_POST['folder']!='.' AND !empty($_POST['btn
 elseif(!empty($_FILES)) {
 	$plxMedias->uploadMultiFiles('selector');
 	$_SESSION['sort_medias'] = 'date_desc';
+	foreach(array('img', 'thumb') as $col) {
+		$name = $col.'_new';
+		$_SESSION[$name] = $_POST[$name];
+		foreach(array('_w', '_h') as $r) {
+			$name_r = $name.$r;
+			$_SESSION[$name_r] = $_POST[$name_r];
+		}
+	}
 	header('Location: medias.php');
 	exit;
 }
@@ -185,8 +193,8 @@ $curFolders = explode('/', $curFolder);
 						echo '<td><input type="checkbox" name="idFile[]" value="'.$name.'" /></td>';
 						echo '<td class="icon">';
 							if(is_file($v['.thumb'])) {
-								$extra = ($isImage) ? ' data-src="'.$v['path'].'"' : '';
-								echo '<img src="'.$v['.thumb'].'" title="'.$name.'" '.$extra.'class="thumb" width="48" height="48" />';
+								$extra = ($isImage) ? ' data-img' : '';
+								echo '<img src="'.$v['.thumb'].'" title="'.$name.'"'.$extra.' class="thumb" width="48" height="48" />';
 							}
 						echo '</td>';
 						echo '<td data-sort="'. $name .'">'.
@@ -306,52 +314,67 @@ ITEM;
 		</div>
 
 		<div class="grid">
+<?php
+// Redimensionnement des images et des thumbnails
+$captions = array('img' => L_MEDIAS_RESIZE, 'thumb' => L_MEDIAS_THUMBS);
+$no_resizes = array('img' => L_MEDIAS_RESIZE_NO, 'thumb' => L_MEDIAS_THUMBS_NONE);
+foreach(array('img', 'thumb') as $col) {
+	$default = $plxAdmin->aConf['thumbs'];
+	switch($col) {
+		case 'img':
+			$choices = array_merge(
+				array('no' => L_MEDIAS_RESIZE_NO),
+				$img_redim,
+				array('conf' => $plxAdmin->aConf['images_l' ].'x'.$plxAdmin->aConf['images_h' ]),
+				array('user' => 'user')
+			);
+			break;
+		case 'thumb':
+			$choices = array_merge(
+				array('no' => L_MEDIAS_THUMBS_NONE),
+				$img_redim,
+				array('conf' => $plxAdmin->aConf['miniatures_l' ].'x'.$plxAdmin->aConf['miniatures_h' ]),
+				array('user' => 'user')
+			);
+			break;
+	}
+?>
 			<div class="col sma-12 med-4">
+				<p><?php echo $captions[$col]; ?>&nbsp;:</p>
 				<ul class="unstyled-list">
-					<li><?php echo L_MEDIAS_RESIZE ?>&nbsp;:&nbsp;</li>
-					<li><input type="radio" checked="checked" name="img_new" />&nbsp;<?php echo L_MEDIAS_RESIZE_NO ?></li>
 					<?php
-						foreach($img_redim as $redim) {
-							echo '<li><input type="radio" name="img_new" value="'.$redim.'" />&nbsp;'.$redim.'</li>';
+						// echo "\n<!--\n\$choices = "; print_r($choices); echo "-->\n"; // for debugging
+						$name = $col.'_new';
+						$lastValue = (isset($_SESSION[$name])) ? $_SESSION[$name] : $choices['conf'];
+						foreach($choices as $i=>$redim) {
+							$value = ($i === 'no') ? '' : $redim;
+							$checked = ($value == $lastValue) ? ' checked' : '';
+							$id = 'id_'.$col.'_new_'.$i;
+							if($i === 'conf') {
+								$extra = ($_SESSION['profil'] < PROFIL_MANAGER) ? '&nbsp;&nbsp;(<a href="parametres_affichage.php">'.L_MEDIAS_MODIFY.'</a>)' : '';
+							} elseif($i === 'user') {
+								$name_w = $name.'_w';
+								$name_h = $name.'_h';
+								$w = (!empty($_SESSION[$name_w])) ? $_SESSION[$name_w] : '';
+								$h = (!empty($_SESSION[$name_h])) ? $_SESSION[$name_h] : '';
+								$extra = <<< EXTRA
+
+						<input type="text" size="2" maxlength="4" name="${name_w}" value="$w" />&nbsp;x&nbsp;
+						<input type="text" size="2" maxlength="4" name="${name_h}" value="$h" />\n
+EXTRA;
+							} else {
+								$extra = '';
+							}
+							echo <<< CHOICE
+					<li><input type="radio" id="${id}" name="${name}" value="$value"$checked />&nbsp;<label for="$id">$redim</label>$extra</li>\n
+CHOICE;
 						}
-						$user_value = intval($plxAdmin->aConf['images_l' ]).'x'.intval($plxAdmin->aConf['images_h' ]);
 					?>
-					<li>
-						<input type="radio" name="img_new" value="<?php echo $user_value; ?>" />&nbsp;<?php echo $user_value; ?>
-						&nbsp;&nbsp;(<a href="parametres_affichage.php"><?php echo L_MEDIAS_MODIFY ?>)</a>
-					</li>
-					<li>
-						<input type="radio" name="img_new" value="user" />&nbsp;
-						<input type="text" size="2" maxlength="4" name="img_new_w" />&nbsp;x&nbsp;
-						<input type="text" size="2" maxlength="4" name="img_new_h" />
-					</li>
 				</ul>
 			</div>
-			<div class="col sma-12 med-8">
-				<ul class="unstyled-list">
-					<li><?php echo L_MEDIAS_THUMBS ?>&nbsp;:&nbsp;</li>
-					<li>
-						<?php $sel = (!$plxAdmin->aConf['thumbs'] ? ' checked="checked"' : '') ?>
-						<input <?php echo $sel ?> type="radio" name="thumb_new" value="" />&nbsp;<?php echo L_MEDIAS_THUMBS_NONE ?>
-					</li>
-					<?php
-						foreach($img_thumb as $thumb) {
-							echo '<li><input type="radio" name="thumb_new" value="'.$thumb.'" />&nbsp;'.$thumb.'</li>';
-						}
-						$user_value = intval($plxAdmin->aConf['miniatures_l' ]).'x'.intval($plxAdmin->aConf['miniatures_h' ]);
-					?>
-					<li>
-						<?php $sel = ($plxAdmin->aConf['thumbs'] ? ' checked="checked"' : '') ?>
-						<input <?php echo $sel ?> type="radio" name="thumb_new" value="<?php echo $user_value; ?>" />&nbsp;<?php echo $user_value; ?>
-						&nbsp;&nbsp;(<a href="parametres_affichage.php"><?php echo L_MEDIAS_MODIFY ?>)</a>
-					</li>
-					<li>
-						<input type="radio" name="thumb_new" value="user" />&nbsp;
-						<input type="text" size="2" maxlength="4" name="thumb_new_w" />&nbsp;x&nbsp;
-						<input type="text" size="2" maxlength="4" name="thumb_new_h" />
-					</li>
-				</ul>
-			</div>
+<?php
+}
+?>
 		</div>
 		<?php eval($plxAdmin->plxPlugins->callHook('AdminMediasUpload')) # Hook Plugins ?>
 	</div>

@@ -23,9 +23,20 @@
 		}
 	}
 
-	const imgs = Array.prototype.slice.call(document.querySelectorAll('img[data-src]'));
+	const mediasTable = document.getElementById('medias-table');
+	var imgs = mediasTable.querySelectorAll('tr td:nth-of-type(2) img[data-img]');
 	if(imgs.length > 0) {
-		const mediasTable = document.getElementById('medias-table');
+
+		// console.log('tableau imgs  créé');
+
+		function updateImgs() {
+			imgs = mediasTable.querySelectorAll('tr td:nth-of-type(2) img[data-img]');
+			for(var i=0, iMax=imgs.length; i<iMax; i++) { imgs[i].index = i; }
+			// console.log('Tableau trié');
+		}
+
+		updateImgs();
+
 		const i18n = JSON.parse(mediasTable.dataset.i18n);
 		const modalBox = document.querySelector('.modal');
 		const closeBtn = document.querySelector('.modal button.closeBtn');
@@ -36,11 +47,13 @@
 		const offset = (filename.hasAttribute('data-root')) ? filename.getAttribute('data-root').length : 0;
 		const counter = document.querySelector('.modal div.counter');
 		const img = document.querySelector('.modal .modal-box img');
-		img.onload = function(event) {
-			size.textContent = img.width + ' x ' + img.height;
+		const preloadImg = new Image();
+		preloadImg.onload = function(event) {
+			// Only for getting the real size of img
+			size.textContent = preloadImg.width + ' x ' + preloadImg.height;
+			img.src = preloadImg.src;
 		};
 		var pos = null;
-		var imgSrcList = [];
 
 		function copyToClipboard(value) {
 			const entry = document.getElementById('clipboard-entry');
@@ -51,24 +64,15 @@
 		}
 
 		function setImgSrc(index) {
-			if(index < 0 || index > imgSrcList.length - 1) { return; }
+			if(index < 0 || index > imgs.length - 1) { return; }
 			pos = index;
-			var src = imgSrcList[pos];
-			img.src = src;
+			const src = imgs[pos].getAttribute('src').replace(/\/\.thumbs\//, '/');
+			preloadImg.src = src;
 			prevBtn.disabled = (pos <= 0);
-			nextBtn.disabled = (pos >= imgSrcList.length -1);
+			nextBtn.disabled = (pos >= imgs.length -1);
 			filename.textContent = (offset > 0) ? src.substring(offset) : src;
-			counter.textContent = (pos + 1) + ' / ' + imgSrcList.length;
+			counter.textContent = (pos + 1) + ' / ' + imgs.length;
 		}
-
-		imgs.forEach(function(item) {
-			imgSrcList.push(item.getAttribute('data-src'));
-			item.addEventListener('click', function(event) {
-				setImgSrc(imgSrcList.indexOf(event.target.getAttribute('data-src')));
-				modalBox.classList.add('active');
-				event.preventDefault();
-			})
-		});
 
 		closeBtn.addEventListener('click', function(event) {
 			modalBox.classList.remove('active');
@@ -123,7 +127,7 @@
 			}
 		});
 
-		// gestion des icones et de la recherche dans le tableau de medias
+		// gestion du mode modal, des icones et de la recherche dans le tableau de medias
 		if(mediasTable != null) {
 			mediasTable.addEventListener('click', function(event) {
 				const el = event.target;
@@ -142,6 +146,11 @@
 							dialogBox('dlgRenameFile');
 						}
 					}
+				} else if(el.tagName == 'IMG' && el.hasAttribute('data-img')) {
+					// gestion du modal
+					setImgSrc(el.index);
+					modalBox.classList.add('active');
+					event.preventDefault();
 				}
 			});
 
@@ -193,7 +202,7 @@
 
 		// https://developer.mozilla.org/en-US/docs/Web/Events/load
 		myScript.addEventListener('load', function(event) {
-			console.log(this.src + ' loaded');
+			// console.log(this.src + ' loaded');
 			Tablesort.extend(
 				'integer',
 				function(item) { return /^\d+$/.test(item); },
@@ -218,6 +227,7 @@
 
 			const sort = new Tablesort(mediasTable, { descending: descending });
 			this.table.addEventListener('afterSort', function(event) {
+				updateImgs();
 				const form = document.getElementById('form_medias');
 				if(form != null) {
 					const col = sort.current;
@@ -237,7 +247,7 @@
 		var src = document.scripts[document.scripts.length-1].src.replace(/[^/]*\.js$/, 'tablesort.min.js');
 		myScript.src = src;
 		myScript.table = mediasTable;
-		console.log('Downloading ' + src);
+		// console.log('Downloading ' + src);
 		document.head.appendChild(myScript);
 
 	}
@@ -352,14 +362,8 @@
 			document.getElementById('btn_upload').disabled = disabledForm;
 		});
 
-		inputFiles.form.onprogress = function(event) {
-			console.log('form progress');
-			console.log(this.loaded);
-			console.log(this.total);
-		}
-
 		inputFiles.ondragenter = function(event) { this.classList.add('drag'); }
-		inputFiles.ondragexit = function(event)      { this.classList.remove('drag'); }
+		inputFiles.ondragexit = function(event)  { this.classList.remove('drag'); }
 		inputFiles.ondrop = function(event)      { this.classList.remove('drag'); }
 	}
 })();
