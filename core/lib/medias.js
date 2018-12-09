@@ -17,6 +17,10 @@
 		const closeBtn = dlg.querySelector('.dialog-close');
 		closeBtn.onclick = function(event) { dlg.classList.remove('active'); };
 		dlg.classList.add('active');
+		const input = dlg.querySelector('input[type="text"]');
+		if(input != null) {
+			input.focus();
+		}
 	}
 
 	const imgs = Array.prototype.slice.call(document.querySelectorAll('img[data-src]'));
@@ -127,10 +131,11 @@
 					const a = el.parentElement.querySelector('a[href]');
 					if(a != null) {
 						event.preventDefault();
-						const value = a.href;
+						const value = a.getAttribute('href'); // différent de a.href;
 						if(!el.hasAttribute('data-rename')) {
 							// copy link into the clipboard
-							copyToClipboard(value);
+							const offset = (mediasTable.hasAttribute('data-plxroot-offset')) ? mediasTable.getAttribute('data-plxroot-offset') : 0;
+							copyToClipboard(value.substr(offset));
 						} else {
 							// rename the file
 							document.getElementById('id_oldname').value = value;

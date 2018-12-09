@@ -162,7 +162,7 @@ $curFolders = explode('/', $curFolder);
 		</div>
 
 		<div class="scrollable-table">
-			<table id="medias-table" class="full-width" data-i18n='{"copyClp" : "<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>"}' data-medias-sort="<?php echo $sort; ?>">
+			<table id="medias-table" class="full-width" data-plxroot-offset="<?php echo strlen(PLX_ROOT); ?>" data-i18n='{"copyClp" : "<?php echo L_MEDIAS_LINK_COPYCLP_DONE; ?>"}' data-medias-sort="<?php echo $sort; ?>">
 				<thead>
 					<tr>
 						<th class="checkbox" data-sort-method='none'><input type="checkbox" onclick="return checkAll(this.form, 'idFile[]');" /></th>
@@ -363,21 +363,27 @@ ITEM;
 <?php /* -------------- New Folder Dialog ------------------ */ ?>
 <div id="dlgNewFolder" class="dialog">
 	<div class="dialog-content">
-		<?php echo L_MEDIAS_NEW_FOLDER ?>
-		<input id="id_newfolder" type="text" name="newfolder" value="" maxlength="50" size="15" />
-		<input type="submit" name="btn_newfolder" value="<?php echo L_MEDIAS_CREATE_FOLDER ?>" />
-		<span class="dialog-close">🞭</span>
+		<form method="post">
+			<?php echo L_MEDIAS_NEW_FOLDER ?>
+			<input id="id_newfolder" type="text" name="newfolder" value="" maxlength="50" size="15" />
+			<input type="submit" name="btn_newfolder" value="<?php echo L_MEDIAS_CREATE_FOLDER ?>" />
+			<?php echo plxToken::getTokenPostMethod(); ?>
+			<span class="dialog-close">🞭</span>
+		</form>
 	</div>
 </div>
 
 <?php /* --------------- Rename File Dialog ---------------- */ ?>
 <div id="dlgRenameFile" class="dialog">
 	<div class="dialog-content">
-		<?php echo L_MEDIAS_NEW_NAME ?>
-		<input id="id_newname" type="text" name="newname" value="" maxlength="50" size="15" />
-		<input id="id_oldname" type="hidden" name="oldname" />
-		<input type="submit" name="btn_renamefile" value="<?php echo L_MEDIAS_RENAME ?>" />
-		<span class="dialog-close">🞭</span>
+		<form method="post">
+			<?php echo L_MEDIAS_NEW_NAME ?>
+			<input id="id_newname" type="text" name="newname" value="" maxlength="50" size="15" />
+			<input id="id_oldname" type="hidden" name="oldname" />
+			<input type="submit" name="btn_renamefile" value="<?php echo L_MEDIAS_RENAME ?>" />
+			<?php echo plxToken::getTokenPostMethod(); ?>
+			<span class="dialog-close">🞭</span>
+		</form>
 	</div>
 </div>
 
