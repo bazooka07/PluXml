@@ -405,7 +405,8 @@ STOP;
 				if($_FILES[$name]['error'][$i] == 0) {
 					if($_FILES[$name]['size'][$i] > 0) {
 						$tmp_location = $_FILES[$name]['tmp_name'][$i];
-						$tmp_name = $_FILES[$name]['name'][$i]; // nom actuel du fichier
+						// basename() may prevent filesystem traversal attacks;
+						$tmp_name = basename($_FILES[$name]['name'][$i]); // nom actuel du fichier
 
 						// vérifie si un fichier a déjà le même nom
 						if(!file_exists($this->dir.$tmp_name)) {
