@@ -58,7 +58,7 @@ if($plxAdmin->aConf['userfolders'] AND $_SESSION['profil'] >= PROFIL_WRITER) {
 }
 $plxMedias = new plxMedias($plxMediasRoot, $_SESSION['folder'], $sort);
 
-# On traite le $_POST[..]
+/* ----------- Début de traitement du $_POST[...] ------------- */
 if(!empty($_POST['btn_newfolder']) AND !empty($_POST['newfolder'])) {
 	$newdir = plxUtils::title2filename(trim($_POST['newfolder']));
 	if($plxMedias->newDir($newdir)) {
@@ -109,9 +109,14 @@ elseif(!empty($_POST['selection']) AND !empty($_POST['idFile']) AND !empty($_POS
 			exit;
 	}
 }
+/* ----------- Fin de traitement du $_POST[...] ------------- */
 
 # Contenu des 2 listes déroulantes
 $selectionList = array(''=>L_FOR_SELECTION,'move'=>L_PLXMEDIAS_MOVE_FOLDER,'thumbs'=>L_MEDIAS_RECREATE_THUMB,'-'=>'-----','delete' =>L_DELETE_FILE);
+
+# Traitement de la barre de progression de l'envoi du lot de fichiers
+const SESSION_UPLOAD_PREFIX = 'session.upload_progress.';
+define('SESSION_UPLOAD_ENABLED', (ini_get(SESSION_UPLOAD_PREFIX .'enabled') == 1));
 
 # On inclut le header
 include __DIR__ .'/top.php';
@@ -244,7 +249,7 @@ $curFolders = explode('/', $curFolder);
 
 <?php  ?>
 <?php
-/* ----------- Téléversement des fichiers -------- *\
+/* ----------- Téléversement d'un lot de fichiers -------- *\
  * for debugging, set at the root of the site, the script variables.php which contains the following line :
  * <?php phpinfo(INFO_VARIABLE); ?>
  * and add in the <form> tag : action="<?php echo PLX_ROOT; ?>variables.php"
@@ -308,9 +313,28 @@ ITEM;
 		</div>
 
 		<div id="upload-area">
-			<input type="file" id="selector" name="selector[]" multiple accept="image/*, audio/*, application/pdf, text/*, */*"/>
+<?php
+// gestion de la barre de progression de l'envoi du lot de fichiers
+if(SESSION_UPLOAD_ENABLED) {
+	$session_upload_name = ini_get(SESSION_UPLOAD_PREFIX .'name');
+	$session_upload_value = plxUtils::charAleatoire(16);
+	$data_session = ' data-session="'.$session_upload_name.'"';
+?>
+			<input type="hidden" name="<?php echo $session_upload_name; ?>" value="<?php echo $session_upload_value; ?>" />
+<?php
+}
+?>
+			<input type="file" id="selector" name="selector[]" multiple accept="image/*, audio/*, application/pdf, text/*, */*"<?php if(!empty($data_session)) { echo $data_session; } ?>/>
 			<p><?php echo L_MEDIAS_DROP_CLICK; ?></p>
 			<div class="files_list" id="files_list" data-icons-path="<?php echo plxMedias::ICONS_PATH; ?>" data-icon-exts="<?php echo $plxMedias->iconExts('|'); ?>"></div>
+<?php
+// gestion de la barre de progression de l'envoi du lot de fichiers
+if(SESSION_UPLOAD_ENABLED) {
+?>
+			<progress id="upload-progress" value="0" min="0" max="200"></progress>
+<?php
+}
+?>
 		</div>
 
 		<div class="grid">

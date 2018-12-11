@@ -365,5 +365,42 @@
 		inputFiles.ondragenter = function(event) { this.classList.add('drag'); }
 		inputFiles.ondragexit = function(event)  { this.classList.remove('drag'); }
 		inputFiles.ondrop = function(event)      { this.classList.remove('drag'); }
+
+		// Gestion de la progresssion de l'envoi du lot de fichiers
+		const progressBar = document.getElementById('upload-progress');
+		const form1 = document.getElementById('form_uploader');
+		const keyName = (inputFiles.hasAttribute('data-session')) ? inputFiles.dataset.session : null;
+
+		function parseResponse(value) {
+			const datas = JSON.parse(value);
+			if(datas != null) {
+				progressBar.value = progressBar.max * datas.bytes_processed / datas.content_length;
+			}
+		}
+
+		if(progressBar != null && form1 != null && keyName != null) {
+			const key = form1.elements[keyName].value;
+			const url = form1.action.replace(/\.php$/, '-tracker.php') + '?key=' + key;
+			var timer1 = null;
+			const xhr = new XMLHttpRequest();
+			xhr.onreadystatechange = function() {
+				if(xhr.readyState == XMLHttpRequest.DONE && xhr.status == 200) {
+					parseResponse(xhr.responseText);
+
+					if(timer1 != null) { clearTimeout(timer1); }
+					timer1 = setTimeout(function() {
+						xhr.open('GET', url);
+						xhr.send();
+					}, 1500);
+				}
+			};
+
+			form1.addEventListener('submit', function(event) {
+				timer1 = setTimeout(function() {
+					xhr.open('GET', url);
+					xhr.send();
+				}, 500);
+			});
+		}
 	}
 })();
