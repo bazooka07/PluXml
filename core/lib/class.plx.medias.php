@@ -440,6 +440,11 @@ STOP;
 							plxMsg::Error(L_PLXMEDIAS_WRONG_FILEFORMAT);
 							$success = false;
 						}
+
+						# Une petite pause après un gros fichier
+						if($_FILES[$name]['size'][$i] > 524288) {
+							sleep(1);
+						}
 					} else {
 						plxMsg::Error(L_PLXMEDIAS_WRONG_FILESIZE);
 						$success = false;
