@@ -63,15 +63,23 @@
 			alert(i18n.copyClp + ' :\n' + value);
 		}
 
-		function setImgSrc(index) {
-			if(index < 0 || index > imgs.length - 1) { return; }
-			pos = index;
+		function setImgSrc(step, absolute) {
+			if(step == 0 || absolute === true) {
+				pos = step;
+			} else {
+				pos = (pos + step + imgs.length) % imgs.length;
+			}
 			const src = imgs[pos].getAttribute('src').replace(/\/\.thumbs\//, '/');
 			preloadImg.src = src;
-			prevBtn.disabled = (pos <= 0);
-			nextBtn.disabled = (pos >= imgs.length -1);
+			// prevBtn.disabled = (pos <= 0);
+			// nextBtn.disabled = (pos >= imgs.length -1);
 			filename.textContent = (offset > 0) ? src.substring(offset) : src;
 			counter.textContent = (pos + 1) + ' / ' + imgs.length;
+		}
+
+		if(imgs.length == 1) {
+			prevBtn.disabled = true;
+			nextBtn.disabled = true;
 		}
 
 		closeBtn.addEventListener('click', function(event) {
@@ -79,11 +87,11 @@
 			event.preventDefault();
 		});
 		prevBtn.addEventListener('click', function(event) {
-			setImgSrc(pos - 1);
+			setImgSrc(-1);
 			event.preventDefault();
 		});
 		nextBtn.addEventListener('click', function(event) {
-			setImgSrc(pos + 1);
+			setImgSrc(1);
 			event.preventDefault();
 		});
 		filename.addEventListener('click', function(event) {
@@ -96,17 +104,17 @@
 				if(!event.altKey && !event.ctrlKey && !event.shiftKey) {
 					switch(event.key) {
 						case 'ArrowLeft':
-							setImgSrc(pos - 1);
+							setImgSrc(-1);
 							break;
 						case ' ':
 						case 'ArrowRight':
-							setImgSrc(pos + 1);
+							setImgSrc(1);
 							break;
 						case 'Home':
 							setImgSrc(0);
 							break;
 						case 'End':
-							setImgSrc(imgSrcList.length - 1);
+							setImgSrc(imgs.length - 1, true);
 							break;
 						case 'Escape' :
 							modalBox.classList.remove('active');
@@ -117,7 +125,7 @@
 					}
 					event.preventDefault();
 				} else if(event.ctrlKey && !event.shiftKey && event.key == 'c') {
-					var value = imgSrcList[pos].replace(/^(\.+\/)+/, '');
+					var value = imgs[pos].replace(/^(\.+\/)+/, '');
 					if(event.altKey) {
 						// On calcule l'url de la miniature
 						value = value.replace(/(\.(?:jpe?g|png|gif))$/, '.tb$1');
@@ -148,7 +156,7 @@
 					}
 				} else if(el.tagName == 'IMG' && el.hasAttribute('data-img')) {
 					// gestion du modal
-					setImgSrc(el.index);
+					setImgSrc(el.index, true);
 					modalBox.classList.add('active');
 					event.preventDefault();
 				}
@@ -297,8 +305,10 @@
 
 	if(inputFiles != null) {
 		const exts = (iconExts != null) ? iconExts.split('|') : null;
+		var figures = null; // Pour suivre la progression de la réception des fichiers
 		inputFiles.addEventListener('change', function(event) {
 			filesList.innerHTML = '';
+			figures = {};
 			var filesCount = 0;
 			var filesSum = 0;
 			var badFilesSize = 0;
@@ -306,6 +316,7 @@
 			for(var i=0, iMax=inputFiles.files.length; i<iMax; i++) {
 				const curFile = inputFiles.files[i];
 				const fig = document.createElement('FIGURE');
+				figures[curFile.name] = fig;
 
 				// teste la taille des fichiers
 				if(limits.upload_max_filesize > 0 && curFile.size > limits.upload_max_filesize) {
@@ -354,6 +365,7 @@
 					disabledForm = true;
 				} else {
 					load = parseInt(100.0 * filesSum / limits.post_max_size);
+					document.getElementById('post_max_size').classList.remove('blink');
 				}
 				// Progressbar for the size of post datas
 				progressLoad.value = load;
@@ -366,7 +378,7 @@
 		inputFiles.ondragexit = function(event)  { this.classList.remove('drag'); }
 		inputFiles.ondrop = function(event)      { this.classList.remove('drag'); }
 
-		// Gestion de la progresssion de l'envoi du lot de fichiers
+		// Gestion de la progression de l'envoi du lot de fichiers
 		const progressBar = document.getElementById('upload-progress');
 		const form1 = document.getElementById('form_uploader');
 		const keyName = (inputFiles.hasAttribute('data-session')) ? inputFiles.dataset.session : null;
@@ -375,6 +387,12 @@
 			const datas = JSON.parse(value);
 			if(datas != null) {
 				progressBar.value = progressBar.max * datas.bytes_processed / datas.content_length;
+				for(var f in datas.files) {
+					const file1 = datas.files[f];
+					if(file1.done && 'name' in file1) {
+						figures[file1.name].classList.add('done');
+					}
+				}
 			}
 		}
 

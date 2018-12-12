@@ -1,7 +1,10 @@
 # a2enmod expires
 
-<IfModule mod_expires.c>
-	ExpiresActive On
-	ExpiresDefault "access plus 2 hours"
-</IfModule>
+<IfDefine !Free>
+	# Les règles suivantes ne sont pas utilisables chez l'hébergeur free.fr (pages perso)
+	<IfModule mod_expires.c>
+		ExpiresActive On
+		ExpiresDefault "access plus 2 hours"
+	</IfModule>
+</IfDefine>
 

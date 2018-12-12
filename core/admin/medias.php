@@ -374,23 +374,22 @@ foreach(array('img', 'thumb') as $col) {
 							$value = ($i === 'no') ? '' : $redim;
 							$checked = ($value == $lastValue) ? ' checked' : '';
 							$id = 'id_'.$col.'_new_'.$i;
-							if($i === 'conf') {
-								$extra = ($_SESSION['profil'] < PROFIL_MANAGER) ? '&nbsp;&nbsp;(<a href="parametres_affichage.php">'.L_MEDIAS_MODIFY.'</a>)' : '';
+							$extra = '<label for="'.$id.'">'.$redim.'</label>';
+							if($i === 'conf' and $_SESSION['profil'] < PROFIL_MANAGER) {
+								$extra .= '&nbsp;&nbsp;(<a href="parametres_affichage.php">'.L_MEDIAS_MODIFY.'</a>)';
 							} elseif($i === 'user') {
 								$name_w = $name.'_w';
 								$name_h = $name.'_h';
 								$w = (!empty($_SESSION[$name_w])) ? $_SESSION[$name_w] : '';
 								$h = (!empty($_SESSION[$name_h])) ? $_SESSION[$name_h] : '';
-								$extra = <<< EXTRA
+								$extra = <<< EXTRA_USER
 
 						<input type="text" size="2" maxlength="4" name="${name_w}" value="$w" />&nbsp;x&nbsp;
 						<input type="text" size="2" maxlength="4" name="${name_h}" value="$h" />\n
-EXTRA;
-							} else {
-								$extra = '';
+EXTRA_USER;
 							}
 							echo <<< CHOICE
-					<li><input type="radio" id="${id}" name="${name}" value="$value"$checked />&nbsp;<label for="$id">$redim</label>$extra</li>\n
+					<li><input type="radio" id="${id}" name="${name}" value="$value"$checked />&nbsp;$extra</li>\n
 CHOICE;
 						}
 					?>

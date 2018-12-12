@@ -410,6 +410,13 @@ label[for="id_toggle_medias"] {
 	background-color: #eee;
 	border: 3px solid transparent;
 }
+#files_list figure.done {
+	border-color: #182;
+}
+#files_list figure.done figcaption {
+	background-color: #182;
+	color: #fff;
+}
 #files_list figure.big-size {
 	border-color: red;
 }
@@ -761,7 +768,7 @@ th.checkbox {
 	bottom: 0;
 	left: 0;
 	overflow: hidden;
-	background: #000e;
+	background: #444;
 	color: #fff;
 	text-align: center;
 	opacity: 0;
@@ -782,10 +789,7 @@ th.checkbox {
 }
 .modal button {
 	position: fixed;
-}
-.modal button {
-	height: 10rem;
-	background-color: transparent;
+	height: auto;
 	font-weight: bold;
 	font-size: 3rem;
 	padding: 0 1rem;
@@ -796,11 +800,9 @@ th.checkbox {
 .modal button.closeBtn {
 	top: 0;
 	right: 0;
-	height: 5rem;
 }
 .modal button:not(.closeBtn) {
-	top: 0;
-	margin-top: 50vh;
+	top: 50vh;
 	transform: translateY(-50%);
 }
 .modal button.prevBtn { left: 1rem; }
