@@ -183,7 +183,7 @@
 			if(searchInput != null) {
 				searchInput.onkeyup = function(event) {
 					event.preventDefault();
-					const value = event.target.value.toLowerCase();
+					const value = event.target.value.trim().toLowerCase();
 					lookForMedias(value);
 					if(typeof(localStorage) == 'object') {
 						if(value.length > 0) {
